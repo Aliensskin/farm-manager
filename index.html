@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="FarmMgr"/>
+<meta name="theme-color" content="#0f1a0a"/>
+<title>Farm Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700;900&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0f1a0a;--surface:#172010;--card:#1e2d14;--card2:#243318;
+  --border:#2d4020;--border2:#3a5028;
+  --green:#7ab83e;--green2:#5a9828;--green3:#a8d860;
+  --gold:#d4a935;--gold2:#f0c840;
+  --red:#c85050;--red2:#e07070;
+  --blue:#4a9aba;--teal:#3aaa80;
+  --text:#d8eac0;--text2:#a8c080;--muted:#7a9060;--dim:#4a6030;
+  --radius:10px;--radius2:16px;
+  --shadow:0 4px 20px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);font-family:'Source Sans 3',sans-serif;color:var(--text);font-size:15px;}
+h1,h2,h3,h4{font-family:'Bitter',serif;}
+
+/* ── Layout ── */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
+#header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;z-index:50;}
+#header-left{display:flex;align-items:center;gap:10px;}
+#header-logo{width:34px;height:34px;border-radius:8px;overflow:hidden;background:var(--green2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+#header-logo img{width:100%;height:100%;object-fit:cover;}
+#header-title{font-family:'Bitter',serif;font-size:16px;font-weight:700;color:var(--green3);letter-spacing:.02em;}
+#header-sub{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#bottom-nav{background:var(--surface);border-top:1px solid var(--border);display:flex;flex-shrink:0;z-index:50;}
+.nav-btn{flex:1;padding:8px 2px 10px;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--dim);transition:color .15s;font-family:inherit;}
+.nav-btn.active{color:var(--green);}
+.nav-btn svg{width:22px;height:22px;}
+.nav-btn span{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.nav-indicator{width:18px;height:2px;background:var(--green);border-radius:1px;margin-top:1px;opacity:0;}
+.nav-btn.active .nav-indicator{opacity:1;}
+
+/* ── Scrollable page ── */
+.page{padding:16px 16px 20px;max-width:540px;margin:0 auto;}
+.page-title{font-size:20px;font-weight:800;color:var(--green3);margin-bottom:4px;}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;}
+.card+.card{margin-top:12px;}
+.card-title{font-family:'Bitter',serif;font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
+.card-highlight{border-color:var(--green2);}
+
+/* ── Stat grid ── */
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;}
+.stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:5px;}
+.stat-value{font-family:'Bitter',serif;font-size:22px;font-weight:800;line-height:1;}
+.stat-sub{font-size:11px;color:var(--dim);margin-top:3px;}
+
+/* ── Forms ── */
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.field-hint{font-size:11px;color:var(--dim);margin-top:3px;}
+input,select,textarea{width:100%;padding:9px 12px;background:#1a2810;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;outline:none;font-family:inherit;transition:border-color .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--green);}
+textarea{resize:vertical;rows:3;}
+select option{background:#1e2d14;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field-row.three{grid-template-columns:1fr 1fr 1fr;}
+.readonly-field{padding:9px 12px;background:#141f0c;border:1.5px solid var(--border);border-radius:8px;color:var(--green);font-size:14px;font-weight:700;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;border:none;transition:opacity .15s;}
+.btn:active{opacity:.8;}
+.btn-primary{background:var(--green2);color:#fff;}
+.btn-ghost{background:transparent;color:var(--green);border:1.5px solid var(--border2);}
+.btn-danger{background:transparent;color:var(--red2);border:1.5px solid var(--red);}
+.btn-gold{background:var(--gold);color:#1a1000;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+/* ── Records list ── */
+.record-item{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;}
+.record-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.record-title{font-weight:700;font-size:14px;color:var(--text);}
+.record-date{font-size:11px;color:var(--muted);margin-top:2px;}
+.record-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-top:7px;}
+.record-meta span{display:flex;align-items:center;gap:3px;}
+.record-actions{display:flex;gap:6px;flex-shrink:0;}
+.profit-positive{color:var(--teal);}
+.profit-negative{color:var(--red2);}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.04em;}
+.badge-green{background:#7ab83e22;color:var(--green);}
+.badge-red{background:#c8505022;color:var(--red2);}
+.badge-gold{background:#d4a93522;color:var(--gold);}
+.badge-blue{background:#4a9aba22;color:var(--blue);}
+
+/* ── Section headers ── */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+
+/* ── Module grid (dashboard) ── */
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.module-tile{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+.module-tile:active{background:var(--card);border-color:var(--green);}
+.module-tile .tile-icon{font-size:26px;margin-bottom:5px;}
+.module-tile .tile-name{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;}
+.module-tile .tile-profit{font-size:13px;font-weight:800;margin-top:3px;}
+
+/* ── P&L bar ── */
+.pl-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:8px;}
+.pl-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
+
+/* ── Form panel ── */
+.form-panel{background:var(--card);border:1px solid var(--green2);border-radius:var(--radius2);padding:16px;margin-bottom:16px;}
+.form-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.form-panel-title{font-family:'Bitter',serif;font-size:15px;font-weight:700;color:var(--green);}
+.close-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;}
+
+/* ── Date filter ── */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+.filter-chip{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;border:1.5px solid var(--border2);background:transparent;color:var(--muted);font-family:inherit;}
+.filter-chip.active{background:var(--green2);border-color:var(--green2);color:#fff;}
+
+/* ── Empty state ── */
+.empty{text-align:center;color:var(--dim);padding:36px 0;font-size:14px;}
+.empty-icon{font-size:40px;margin-bottom:10px;}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green2);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Divider ── */
+.divider{height:1px;background:var(--border);margin:14px 0;}
+
+/* ── Tabs ── */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.tab{padding:8px 14px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;text-transform:uppercase;letter-spacing:.06em;}
+.tab.active{color:var(--green);border-bottom-color:var(--green);}
+
+/* ── Summary row ── */
+.summary-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.summary-row:last-child{border-bottom:none;}
+.summary-row .label{color:var(--muted);}
+.summary-row .value{font-weight:700;}
+
+/* ── Cost breakdown ── */
+.cost-item{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px;font-size:12px;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* animations */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .25s ease both;}
+
+/* ── Loading ── */
+#splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s;}
+#splash.hidden{opacity:0;pointer-events:none;}
+.splash-icon{font-size:60px;margin-bottom:16px;}
+.splash-title{font-family:'Bitter',serif;font-size:24px;font-weight:900;color:var(--green3);}
+.splash-sub{font-size:13px;color:var(--muted);margin-top:6px;}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="splash-icon">🌿</div>
+  <div class="splash-title">Farm Manager</div>
+  <div class="splash-sub">Loading your farm data...</div>
+</div>
+
+<div id="app" style="display:none;">
+  <div id="header">
+    <div id="header-left">
+      <div id="header-logo" onclick="goSettings()">🌿</div>
+      <div>
+        <div id="header-title">Farm Manager</div>
+        <div id="header-sub" id="farm-name-sub">Offline · Ready</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-sm btn-ghost" onclick="showPage('reports')" style="font-size:11px;padding:5px 10px;">📊 Reports</button>
+    </div>
+  </div>
+
+  <div id="content"></div>
+
+  <nav id="bottom-nav">
+    <button class="nav-btn active" id="nav-dashboard" onclick="showPage('dashboard')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span>Home</span><div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" id="nav-poultry" onclick="showPage('poultry')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      <span>Poultry</span><div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" id="nav-rabbits" onclick="showPage('rabbits')">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 19.33c-.38.56.21 1.24.82.9C7 18.58 9.5 18 12 18c2.5 0 5 .58 7.36 1.93.61.34 1.2-.34.82-.9C18.1 16.17 16 10 17 8z"/></svg>
+      <span>Rabbits</span><div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" id="nav-more" onclick="toggleMoreMenu()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      <span>More</span><div class="nav-indicator"></div>
+    </button>
+  </nav>
+</div>
+
+<!-- More menu overlay -->
+<div id="more-menu" style="display:none;position:fixed;bottom:65px;right:12px;background:var(--card);border:1px solid var(--border2);border-radius:var(--radius2);padding:8px;z-index:200;min-width:160px;box-shadow:var(--shadow);">
+  <button onclick="showPage('fish');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🐟 Fish Farming</button>
+  <button onclick="showPage('crops');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🌽 Crops</button>
+  <button onclick="showPage('shop');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🏪 Farm Shop</button>
+  <button onclick="showPage('feed');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🧪 Feed Production</button>
+  <div style="height:1px;background:var(--border);margin:6px 0;"></div>
+  <button onclick="showPage('settings');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">⚙️ Settings</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STORAGE ENGINE (IndexedDB with localStorage fallback)
+// ═══════════════════════════════════════════════════════
+const DB = {
+  _data: {},
+  _ready: false,
+
+  async init() {
+    try {
+      // Try to load from localStorage
+      const keys = ['settings','poultry_daily','poultry_inventory','poultry_sales',
+        'rabbit_records','rabbit_sales','fish_ponds','fish_records','fish_sales',
+        'crop_plots','crop_records','shop_stock','shop_sales','feed_batches'];
+      keys.forEach(k => {
+        try { this._data[k] = JSON.parse(localStorage.getItem('fm_'+k)||'[]'); }
+        catch(e) { this._data[k] = []; }
+      });
+      // Settings is object not array
+      try { this._data['settings'] = JSON.parse(localStorage.getItem('fm_settings')||'{}'); }
+      catch(e) { this._data['settings'] = {}; }
+      this._ready = true;
+    } catch(e) { console.error('DB init error',e); }
+  },
+
+  get(key) { return this._data[key] || []; },
+  getObj(key, def={}) { return this._data[key] || def; },
+
+  set(key, val) {
+    this._data[key] = val;
+    try { localStorage.setItem('fm_'+key, JSON.stringify(val)); } catch(e) {}
+  },
+
+  push(key, item) {
+    const arr = this.get(key);
+    arr.unshift(item);
+    this.set(key, arr);
+    return arr;
+  },
+
+  update(key, id, updates) {
+    const arr = this.get(key);
+    const idx = arr.findIndex(x => x.id === id);
+    if(idx >= 0) { arr[idx] = {...arr[idx], ...updates}; this.set(key, arr); }
+    return arr;
+  },
+
+  delete(key, id) {
+    const arr = this.get(key).filter(x => x.id !== id);
+    this.set(key, arr);
+    return arr;
+  },
+
+  exportAll() {
+    const out = {};
+    Object.keys(this._data).forEach(k => out[k] = this._data[k]);
+    return out;
+  },
+
+  importAll(data) {
+    Object.keys(data).forEach(k => this.set(k, data[k]));
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const today = () => new Date().toISOString().slice(0,10);
+const fmt = d => { if(!d) return '—'; const dt = new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); };
+const fmtNum = n => Number(n||0).toLocaleString();
+const UGX = n => 'UGX '+fmtNum(n);
+const pct = (n,total) => total ? Math.round((n/total)*100) : 0;
+
+function toast(msg, dur=2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function confirm2(msg) { return window.confirm(msg); }
+
+// Date filter helpers
+function filterByPeriod(arr, period, dateField='date') {
+  const now = new Date();
+  return arr.filter(r => {
+    const d = new Date(r[dateField]+'T00:00:00');
+    if(period === 'today') return d.toDateString() === now.toDateString();
+    if(period === 'week') { const w = new Date(now); w.setDate(now.getDate()-7); return d >= w; }
+    if(period === 'month') return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+    if(period === 'year') return d.getFullYear()===now.getFullYear();
+    return true; // 'all'
+  });
+}
+
+// Auto-profit: revenue - all costs
+function calcProfit(revenue, costs) { return Number(revenue||0) - Number(costs||0); }
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+let currentPage = 'dashboard';
+const NAV_PAGES = ['dashboard','poultry','rabbits'];
+
+function showPage(page) {
+  currentPage = page;
+  // Update nav
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if(NAV_PAGES.includes(page)) {
+    const btn = document.getElementById('nav-'+page);
+    if(btn) btn.classList.add('active');
+  } else {
+    document.getElementById('nav-more').classList.add('active');
+  }
+  // Update header title
+  const titles = {dashboard:'Farm Manager',poultry:'🐔 Poultry',rabbits:'🐇 Rabbits',fish:'🐟 Fish Farming',crops:'🌽 Crops',shop:'🏪 Farm Shop',feed:'🧪 Feed Production',reports:'📊 Reports',settings:'⚙️ Settings'};
+  document.getElementById('header-title').textContent = titles[page] || 'Farm Manager';
+  // Render
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  const pages = {dashboard: renderDashboard, poultry: renderPoultry, rabbits: renderRabbits, fish: renderFish, crops: renderCrops, shop: renderShop, feed: renderFeed, reports: renderReports, settings: renderSettings};
+  if(pages[page]) { const el = pages[page](); el.classList.add('fade-in'); content.appendChild(el); }
+}
+
+function goSettings() { showPage('settings'); }
+function toggleMoreMenu() {
+  const m = document.getElementById('more-menu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('more-menu');
+  if(m.style.display==='block' && !m.contains(e.target) && !e.target.closest('#nav-more')) {
+    m.style.display='none';
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// SHARED COST FORM BUILDER
+// ═══════════════════════════════════════════════════════
+function costsFormHTML(prefix='') {
+  return `
+  <div style="background:var(--bg);border-radius:8px;padding:12px;margin-top:4px;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">💰 Cost Breakdown</div>
+    <div class="field-row">
+      <div class="field"><label>Feed Cost (UGX)</label><input type="number" id="${prefix}cost_feed" placeholder="0" min="0"/></div>
+      <div class="field"><label>Labour Cost (UGX)</label><input type="number" id="${prefix}cost_labour" placeholder="0" min="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Health/Vet (UGX)</label><input type="number" id="${prefix}cost_health" placeholder="0" min="0"/></div>
+      <div class="field"><label>Other Costs (UGX)</label><input type="number" id="${prefix}cost_other" placeholder="0" min="0"/></div>
+    </div>
+  </div>`;
+}
+
+function getCosts(prefix='') {
+  const feed   = Number(document.getElementById(prefix+'cost_feed')?.value||0);
+  const labour = Number(document.getElementById(prefix+'cost_labour')?.value||0);
+  const health = Number(document.getElementById(prefix+'cost_health')?.value||0);
+  const other  = Number(document.getElementById(prefix+'cost_other')?.value||0);
+  const total  = feed+labour+health+other;
+  return {feed, labour, health, other, total};
+}
+
+function setCosts(prefix, costs) {
+  if(!costs) return;
+  ['feed','labour','health','other'].forEach(k => {
+    const el = document.getElementById(prefix+'cost_'+k);
+    if(el) el.value = costs[k]||0;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function getDashboardStats(period='month') {
+  const stats = { revenue:0, costs:0, modules:{} };
+
+  // Poultry
+  const psales = filterByPeriod(DB.get('poultry_sales'), period);
+  const pRev = psales.reduce((s,r)=>s+Number(r.revenue||0),0);
+  const pCost = psales.reduce((s,r)=>s+Number(r.costs?.total||0),0)
+    + filterByPeriod(DB.get('poultry_daily'),period).reduce((s,r)=>s+Number(r.costs?.total||0),0);
+  stats.modules.poultry = {revenue:pRev, costs:pCost, label:'Poultry', icon:'🐔'};
+
+  // Rabbits
+  const rsales = filterByPeriod(DB.get('rabbit_sales'), period);
+  const rRev = rsales.reduce((s,r)=>s+Number(r.revenue||0),0);
+  const rCost = rsales.reduce((s,r)=>s+Number(r.costs?.total||0),0)
+    + filterByPeriod(DB.get('rabbit_records'),period).reduce((s,r)=>s+Number(r.costs?.total||0),0);
+  stats.modules.rabbits = {revenue:rRev, costs:rCost, label:'Rabbits', icon:'🐇'};
+
+  // Fish
+  const fsales = filterByPeriod(DB.get('fish_sales'), period);
+  const fRev = fsales.reduce((s,r)=>s+Number(r.revenue||0),0);
+  const fCost = fsales.reduce((s,r)=>s+Number(r.costs?.total||0),0)
+    + filterByPeriod(DB.get('fish_records'),period).reduce((s,r)=>s+Number(r.costs?.total||0),0);
+  stats.modules.fish = {revenue:fRev, costs:fCost, label:'Fish', icon:'🐟'};
+
+  // Crops
+  const crecs = filterByPeriod(DB.get('crop_records'), period);
+  const cRev = crecs.reduce((s,r)=>s+Number(r.revenue||0),0);
+  const cCost = crecs.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+  stats.modules.crops = {revenue:cRev, costs:cCost, label:'Crops', icon:'🌽'};
+
+  // Shop
+  const ssales = filterByPeriod(DB.get('shop_sales'), period);
+  const sRev = ssales.reduce((s,r)=>s+Number(r.revenue||0),0);
+  const sCost = ssales.reduce((s,r)=>s+Number(r.purchase_cost||0),0);
+  stats.modules.shop = {revenue:sRev, costs:sCost, label:'Shop', icon:'🏪'};
+
+  // Feed
+  const fbatches = filterByPeriod(DB.get('feed_batches'), period);
+  const fdCost = fbatches.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+  stats.modules.feed = {revenue:0, costs:fdCost, label:'Feed Prod.', icon:'🧪'};
+
+  Object.values(stats.modules).forEach(m => { stats.revenue += m.revenue; stats.costs += m.costs; });
+  stats.profit = stats.revenue - stats.costs;
+  return stats;
+}
+
+function renderDashboard() {
+  const div = document.createElement('div');
+  div.className = 'page';
+
+  let period = 'month';
+
+  const render = () => {
+    const stats = getDashboardStats(period);
+    const settings = DB.getObj('settings');
+
+    div.innerHTML = `
+    <div class="page-title">${settings.farmName||'My Farm'}</div>
+    <div class="page-sub">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+
+    <div class="filter-bar">
+      ${['today','week','month','year','all'].map(p=>`<button class="filter-chip ${p===period?'active':''}" onclick="window._dashPeriod='${p}';window._dashRender()">${p.charAt(0).toUpperCase()+p.slice(1)}</button>`).join('')}
+    </div>
+
+    <!-- P&L Summary -->
+    <div class="card card-highlight" style="margin-bottom:14px;">
+      <div class="card-title">Overall Performance</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-label">Total Revenue</div><div class="stat-value" style="color:var(--teal);font-size:18px;">${UGX(stats.revenue)}</div></div>
+        <div class="stat-box"><div class="stat-label">Total Costs</div><div class="stat-value" style="color:var(--red2);font-size:18px;">${UGX(stats.costs)}</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <div>
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Net Profit / Loss</div>
+          <div style="font-family:'Bitter',serif;font-size:28px;font-weight:900;color:${stats.profit>=0?'var(--teal)':'var(--red2)'};">${UGX(Math.abs(stats.profit))}</div>
+        </div>
+        <div class="badge ${stats.profit>=0?'badge-green':'badge-red'}" style="font-size:13px;padding:6px 12px;">${stats.profit>=0?'PROFIT':'LOSS'}</div>
+      </div>
+      <div class="pl-bar"><div class="pl-bar-fill" style="width:${stats.revenue?pct(stats.revenue,stats.revenue+stats.costs):0}%;background:${stats.profit>=0?'var(--teal)':'var(--red2)'};"></div></div>
+    </div>
+
+    <!-- Module tiles -->
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Modules</div>
+    <div class="module-grid">
+      ${Object.entries(stats.modules).map(([key,m])=>{
+        const profit = m.revenue - m.costs;
+        return `<div class="module-tile" onclick="showPage('${key}')">
+          <div class="tile-icon">${m.icon}</div>
+          <div class="tile-name">${m.label}</div>
+          <div class="tile-profit ${profit>=0?'profit-positive':'profit-negative'}">${profit>=0?'+':'-'}${fmtNum(Math.abs(profit))}</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Module breakdown -->
+    <div class="card">
+      <div class="card-title">Cost Breakdown by Module</div>
+      ${Object.entries(stats.modules).map(([key,m])=>{
+        const profit=m.revenue-m.costs;
+        return `<div style="margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+            <span>${m.icon} ${m.label}</span>
+            <span class="${profit>=0?'profit-positive':'profit-negative'}" style="font-weight:700;">${profit>=0?'+':''}${UGX(profit)}</span>
+          </div>
+          <div style="display:flex;gap:4px;font-size:11px;color:var(--muted);">
+            <span>Rev: ${UGX(m.revenue)}</span><span>·</span><span>Cost: ${UGX(m.costs)}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div style="height:16px;"></div>`;
+  };
+
+  window._dashPeriod = period;
+  window._dashRender = () => { period = window._dashPeriod; render(); };
+  render();
+  return div;
+}
+
+// ═══════════════════════════════════════════════════════
+// POULTRY MODULE
+// ═══════════════════════════════════════════════════════
+function renderPoultry() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let activeTab = 'daily';
+  let showForm = false;
+  let editItem = null;
+
+  const render = () => {
+    const daily = DB.get('poultry_daily');
+    const sales = DB.get('poultry_sales');
+    const inventory = DB.get('poultry_inventory');
+
+    const totalBirds = Number(DB.getObj('settings').initialBirds||0) - daily.reduce((s,r)=>s+Number(r.deaths||0),0);
+    const monthSales = filterByPeriod(sales,'month');
+    const totalRev = monthSales.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const totalCosts = monthSales.reduce((s,r)=>s+Number(r.costs?.total||0),0) + filterByPeriod(daily,'month').reduce((s,r)=>s+Number(r.costs?.total||0),0);
+
+    div.innerHTML = `
+    <div class="page-title">Poultry</div>
+    <div class="page-sub">Track daily activity, stock & sales</div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-box"><div class="stat-label">Birds Alive</div><div class="stat-value" style="color:var(--green);font-size:18px;">${fmtNum(totalBirds)}</div></div>
+      <div class="stat-box"><div class="stat-label">Revenue (Mo.)</div><div class="stat-value" style="color:var(--teal);font-size:16px;">${UGX(totalRev)}</div></div>
+      <div class="stat-box"><div class="stat-label">Net (Mo.)</div><div class="stat-value" style="color:${totalRev-totalCosts>=0?'var(--teal)':'var(--red2)'};font-size:16px;">${UGX(totalRev-totalCosts)}</div></div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab ${activeTab==='daily'?'active':''}" onclick="window._pTab('daily')">Daily Records</div>
+      <div class="tab ${activeTab==='sales'?'active':''}" onclick="window._pTab('sales')">Sales</div>
+      <div class="tab ${activeTab==='inventory'?'active':''}" onclick="window._pTab('inventory')">Inventory</div>
+    </div>
+
+    ${showForm ? renderPoultryForm(activeTab, editItem) : `
+    <div class="section-header">
+      <span class="section-title">${activeTab==='daily'?'Daily Records':activeTab==='sales'?'Sales Records':'Inventory'}</span>
+      <button class="btn btn-primary btn-sm" onclick="window._pNew()">+ Add</button>
+    </div>`}
+
+    <div id="poultry-list">${renderPoultryList(activeTab, daily, sales, inventory)}</div>`;
+
+    window._pTab = t => { activeTab=t; showForm=false; editItem=null; render(); };
+    window._pNew = () => { showForm=true; editItem=null; render(); };
+    window._pEdit = id => {
+      const arr = activeTab==='daily'?daily:activeTab==='sales'?sales:inventory;
+      editItem = arr.find(r=>r.id===id); showForm=true; render();
+    };
+    window._pDel = (id, key) => {
+      if(!confirm2('Delete this record?')) return;
+      DB.delete(key, id); render();
+      toast('Deleted ✓');
+    };
+    window._pSave = () => savePoultryForm(activeTab, editItem, () => { showForm=false; editItem=null; render(); toast('Saved ✓'); });
+    window._pCancel = () => { showForm=false; editItem=null; render(); };
+  };
+  render();
+  return div;
+}
+
+function renderPoultryForm(tab, editItem) {
+  const e = editItem || {};
+  const costs = e.costs || {};
+  if(tab === 'daily') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${editItem?'Edit':'New'} Daily Record</span><button class="close-btn" onclick="window._pCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="p_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Total Birds</label><input type="number" id="p_birds" value="${e.totalBirds||''}" placeholder="500"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Deaths</label><input type="number" id="p_deaths" value="${e.deaths||0}" placeholder="0"/></div>
+      <div class="field"><label>Avg Weight (kg)</label><input type="number" id="p_weight" step="0.1" value="${e.avgWeight||''}" placeholder="1.8"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Feed Type</label><select id="p_feedtype"><option value="">Select</option><option ${e.feedType==='Starter'?'selected':''}>Starter</option><option ${e.feedType==='Grower'?'selected':''}>Grower</option><option ${e.feedType==='Finisher'?'selected':''}>Finisher</option><option ${e.feedType==='Layer Mash'?'selected':''}>Layer Mash</option><option ${e.feedType==='Custom'?'selected':''}>Custom</option></select></div>
+      <div class="field"><label>Feed Qty (kg)</label><input type="number" id="p_feedqty" value="${e.feedQty||''}" placeholder="25"/></div>
+    </div>
+    <div class="field"><label>Water Used (liters)</label><input type="number" id="p_water" value="${e.water||''}" placeholder="80"/></div>
+    ${costsFormHTML('p_')}
+    <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="p_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._pSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._pCancel()">Cancel</button></div>
+  </div>`;
+
+  if(tab === 'sales') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${editItem?'Edit':'New'} Sale</span><button class="close-btn" onclick="window._pCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="p_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Buyer</label><input type="text" id="p_buyer" value="${e.buyer||''}" placeholder="Buyer name"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Birds Sold</label><input type="number" id="p_qty" value="${e.qty||''}" placeholder="0" oninput="window._pCalcRev()"/></div>
+      <div class="field"><label>Price Per Bird (UGX)</label><input type="number" id="p_price" value="${e.price||''}" placeholder="0" oninput="window._pCalcRev()"/></div>
+    </div>
+    <div class="field"><label>Total Revenue</label><div class="readonly-field" id="p_rev_display">${e.revenue?UGX(e.revenue):'—'}</div></div>
+    ${costsFormHTML('p_')}
+    <div class="field" style="margin-top:10px;"><label>Notes / Debt</label><textarea id="p_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._pSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._pCancel()">Cancel</button></div>
+  </div>`;
+
+  if(tab === 'inventory') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${editItem?'Edit':'New'} Inventory</span><button class="close-btn" onclick="window._pCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="p_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Item</label><input type="text" id="p_item" value="${e.item||''}" placeholder="Feed, Vaccine..."/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Qty Added</label><input type="number" id="p_qty_in" value="${e.qtyIn||''}" placeholder="0"/></div>
+      <div class="field"><label>Qty Used</label><input type="number" id="p_qty_out" value="${e.qtyOut||''}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Unit</label><input type="text" id="p_unit" value="${e.unit||''}" placeholder="kg, litres..."/></div>
+      <div class="field"><label>Supplier</label><input type="text" id="p_supplier" value="${e.supplier||''}" placeholder="Optional"/></div>
+    </div>
+    ${costsFormHTML('p_')}
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._pSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._pCancel()">Cancel</button></div>
+  </div>`;
+}
+
+window._pCalcRev = () => {
+  const qty = Number(document.getElementById('p_qty')?.value||0);
+  const price = Number(document.getElementById('p_price')?.value||0);
+  const el = document.getElementById('p_rev_display');
+  if(el) el.textContent = qty&&price ? UGX(qty*price) : '—';
+};
+
+function savePoultryForm(tab, editItem, cb) {
+  const id = editItem?.id || uid();
+  const date = document.getElementById('p_date')?.value;
+  if(!date) { toast('Please set a date'); return; }
+  const costs = getCosts('p_');
+
+  let record;
+  if(tab === 'daily') {
+    record = { id, date, totalBirds:document.getElementById('p_birds')?.value, deaths:document.getElementById('p_deaths')?.value||0, avgWeight:document.getElementById('p_weight')?.value, feedType:document.getElementById('p_feedtype')?.value, feedQty:document.getElementById('p_feedqty')?.value, water:document.getElementById('p_water')?.value, notes:document.getElementById('p_notes')?.value, costs };
+    if(editItem) DB.update('poultry_daily',id,record); else DB.push('poultry_daily',record);
+  } else if(tab === 'sales') {
+    const qty = Number(document.getElementById('p_qty')?.value||0);
+    const price = Number(document.getElementById('p_price')?.value||0);
+    record = { id, date, buyer:document.getElementById('p_buyer')?.value, qty, price, revenue:qty*price, notes:document.getElementById('p_notes')?.value, costs };
+    record.profit = calcProfit(record.revenue, costs.total);
+    if(editItem) DB.update('poultry_sales',id,record); else DB.push('poultry_sales',record);
+  } else if(tab === 'inventory') {
+    record = { id, date, item:document.getElementById('p_item')?.value, qtyIn:document.getElementById('p_qty_in')?.value, qtyOut:document.getElementById('p_qty_out')?.value, unit:document.getElementById('p_unit')?.value, supplier:document.getElementById('p_supplier')?.value, costs };
+    if(editItem) DB.update('poultry_inventory',id,record); else DB.push('poultry_inventory',record);
+  }
+  cb();
+}
+
+function renderPoultryList(tab, daily, sales, inventory) {
+  if(tab === 'daily') {
+    if(!daily.length) return '<div class="empty"><div class="empty-icon">📋</div>No daily records yet</div>';
+    return daily.map(r=>`
+    <div class="record-item">
+      <div class="record-header">
+        <div><div class="record-title">${fmt(r.date)}</div><div class="record-date">Birds: ${fmtNum(r.totalBirds)} · Deaths: ${r.deaths||0}</div></div>
+        <div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._pEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._pDel('${r.id}','poultry_daily')">Del</button></div>
+      </div>
+      <div class="record-meta">
+        ${r.feedType?`<span>🌾 ${r.feedType} ${r.feedQty}kg</span>`:''}
+        ${r.water?`<span>💧 ${r.water}L</span>`:''}
+        ${r.costs?.total?`<span>💰 Cost: ${UGX(r.costs.total)}</span>`:''}
+      </div>
+    </div>`).join('');
+  }
+  if(tab === 'sales') {
+    if(!sales.length) return '<div class="empty"><div class="empty-icon">💰</div>No sales yet</div>';
+    return sales.map(r=>`
+    <div class="record-item">
+      <div class="record-header">
+        <div><div class="record-title">${fmt(r.date)} · ${r.buyer||'—'}</div><div class="record-date">${r.qty} birds @ ${UGX(r.price)}</div></div>
+        <div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._pEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._pDel('${r.id}','poultry_sales')">Del</button></div>
+      </div>
+      <div class="record-meta">
+        <span class="profit-positive">Revenue: ${UGX(r.revenue)}</span>
+        ${r.costs?.total?`<span class="profit-negative">Costs: ${UGX(r.costs.total)}</span>`:''}
+        <span class="${r.profit>=0?'profit-positive':'profit-negative'}">Net: ${UGX(r.profit||r.revenue)}</span>
+      </div>
+    </div>`).join('');
+  }
+  if(tab === 'inventory') {
+    if(!inventory.length) return '<div class="empty"><div class="empty-icon">📦</div>No inventory yet</div>';
+    // Aggregate stock levels
+    const stock = {};
+    inventory.forEach(r=>{ if(!stock[r.item]) stock[r.item]={in:0,out:0}; stock[r.item].in+=Number(r.qtyIn||0); stock[r.item].out+=Number(r.qtyOut||0); });
+    const stockHTML = Object.entries(stock).map(([item,s])=>{
+      const rem=Math.max(0,s.in-s.out); const low=rem<s.in*0.2;
+      return `<div class="cost-item"><span>${item}</span><span style="color:${low?'var(--red2)':'var(--green)'};">${rem} remaining ${low?'⚠':''}</span></div>`;
+    }).join('');
+    const listHTML = inventory.map(r=>`
+    <div class="record-item">
+      <div class="record-header">
+        <div><div class="record-title">${r.item||'—'}</div><div class="record-date">${fmt(r.date)} · +${r.qtyIn||0} in · ${r.qtyOut||0} used ${r.unit||''}</div></div>
+        <div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._pEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._pDel('${r.id}','poultry_inventory')">Del</button></div>
+      </div>
+    </div>`).join('');
+    return `<div class="card" style="margin-bottom:12px;"><div class="card-title">Stock Levels</div>${stockHTML}</div>${listHTML}`;
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════
+// RABBITS MODULE
+// ═══════════════════════════════════════════════════════
+function renderRabbits() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let activeTab = 'records';
+  let showForm = false;
+  let editItem = null;
+
+  const render = () => {
+    const records = DB.get('rabbit_records');
+    const sales = DB.get('rabbit_sales');
+    const monthRec = filterByPeriod(records,'month');
+    const monthSales = filterByPeriod(sales,'month');
+    const totalRev = monthSales.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const totalCosts = monthRec.reduce((s,r)=>s+Number(r.costs?.total||0),0) + monthSales.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+    const totalPop = records.length ? records[0].adults||0 : 0;
+
+    div.innerHTML = `
+    <div class="page-title">Rabbits</div>
+    <div class="page-sub">Breeding, population & sales</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Adults</div><div class="stat-value" style="color:var(--green);">${totalPop}</div></div>
+      <div class="stat-box"><div class="stat-label">Net (Month)</div><div class="stat-value" style="color:${totalRev-totalCosts>=0?'var(--teal)':'var(--red2)'};">${UGX(totalRev-totalCosts)}</div></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab ${activeTab==='records'?'active':''}" onclick="window._rTab('records')">Farm Records</div>
+      <div class="tab ${activeTab==='sales'?'active':''}" onclick="window._rTab('sales')">Sales</div>
+    </div>
+    ${showForm ? renderRabbitForm(activeTab, editItem) : `
+    <div class="section-header">
+      <span class="section-title">${activeTab==='records'?'Farm Records':'Sales'}</span>
+      <button class="btn btn-primary btn-sm" onclick="window._rNew()">+ Add</button>
+    </div>`}
+    <div id="rabbit-list">${renderRabbitList(activeTab, records, sales)}</div>`;
+
+    window._rTab = t => { activeTab=t; showForm=false; editItem=null; render(); };
+    window._rNew = () => { showForm=true; editItem=null; render(); };
+    window._rEdit = id => { const arr=activeTab==='records'?records:sales; editItem=arr.find(r=>r.id===id); showForm=true; render(); };
+    window._rDel = (id,key) => { if(!confirm2('Delete?')) return; DB.delete(key,id); render(); toast('Deleted ✓'); };
+    window._rSave = () => saveRabbitForm(activeTab, editItem, ()=>{ showForm=false; editItem=null; render(); toast('Saved ✓'); });
+    window._rCancel = () => { showForm=false; editItem=null; render(); };
+  };
+  render();
+  return div;
+}
+
+function renderRabbitForm(tab, e2) {
+  const e = e2 || {};
+  if(tab === 'records') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Record</span><button class="close-btn" onclick="window._rCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="r_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Adults</label><input type="number" id="r_adults" value="${e.adults||''}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Kits (young)</label><input type="number" id="r_kits" value="${e.kits||''}" placeholder="0"/></div>
+      <div class="field"><label>Mortality</label><input type="number" id="r_deaths" value="${e.deaths||0}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Male</label><input type="text" id="r_male" value="${e.male||''}" placeholder="Buck ID"/></div>
+      <div class="field"><label>Female</label><input type="text" id="r_female" value="${e.female||''}" placeholder="Doe ID"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Feed Type</label><input type="text" id="r_feed" value="${e.feed||''}" placeholder="Hay, pellets..."/></div>
+      <div class="field"><label>Feed Qty (kg)</label><input type="number" id="r_feedqty" value="${e.feedQty||''}" placeholder="0"/></div>
+    </div>
+    ${costsFormHTML('r_')}
+    <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="r_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._rSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._rCancel()">Cancel</button></div>
+  </div>`;
+
+  return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Sale</span><button class="close-btn" onclick="window._rCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="r_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Buyer</label><input type="text" id="r_buyer" value="${e.buyer||''}" placeholder="Name"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Qty Sold</label><input type="number" id="r_qty" value="${e.qty||''}" oninput="window._rCalc()"/></div>
+      <div class="field"><label>Price Each (UGX)</label><input type="number" id="r_price" value="${e.price||''}" oninput="window._rCalc()"/></div>
+    </div>
+    <div class="field"><label>Revenue</label><div class="readonly-field" id="r_rev">${e.revenue?UGX(e.revenue):'—'}</div></div>
+    ${costsFormHTML('r_')}
+    <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="r_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._rSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._rCancel()">Cancel</button></div>
+  </div>`;
+}
+window._rCalc = () => { const q=Number(document.getElementById('r_qty')?.value||0),p=Number(document.getElementById('r_price')?.value||0),el=document.getElementById('r_rev'); if(el) el.textContent=q&&p?UGX(q*p):'—'; };
+
+function saveRabbitForm(tab, editItem, cb) {
+  const id = editItem?.id || uid();
+  const date = document.getElementById('r_date')?.value; if(!date){toast('Set a date');return;}
+  const costs = getCosts('r_');
+  let rec;
+  if(tab === 'records') {
+    rec = { id, date, adults:document.getElementById('r_adults')?.value, kits:document.getElementById('r_kits')?.value, deaths:document.getElementById('r_deaths')?.value||0, male:document.getElementById('r_male')?.value, female:document.getElementById('r_female')?.value, feed:document.getElementById('r_feed')?.value, feedQty:document.getElementById('r_feedqty')?.value, notes:document.getElementById('r_notes')?.value, costs };
+    if(editItem) DB.update('rabbit_records',id,rec); else DB.push('rabbit_records',rec);
+  } else {
+    const qty=Number(document.getElementById('r_qty')?.value||0),price=Number(document.getElementById('r_price')?.value||0);
+    rec = { id, date, buyer:document.getElementById('r_buyer')?.value, qty, price, revenue:qty*price, notes:document.getElementById('r_notes')?.value, costs };
+    rec.profit = calcProfit(rec.revenue, costs.total);
+    if(editItem) DB.update('rabbit_sales',id,rec); else DB.push('rabbit_sales',rec);
+  }
+  cb();
+}
+
+function renderRabbitList(tab, records, sales) {
+  if(tab === 'records') {
+    if(!records.length) return '<div class="empty"><div class="empty-icon">🐇</div>No records yet</div>';
+    return records.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${fmt(r.date)}</div><div class="record-date">Adults: ${r.adults||0} · Kits: ${r.kits||0} · Deaths: ${r.deaths||0}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._rEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._rDel('${r.id}','rabbit_records')">Del</button></div></div><div class="record-meta">${r.feed?`<span>🌾 ${r.feed} ${r.feedQty}kg</span>`:''} ${r.costs?.total?`<span>💰 ${UGX(r.costs.total)}</span>`:''}</div></div>`).join('');
+  }
+  if(!sales.length) return '<div class="empty"><div class="empty-icon">💰</div>No sales yet</div>';
+  return sales.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${fmt(r.date)} · ${r.buyer||'—'}</div><div class="record-date">${r.qty} rabbits @ ${UGX(r.price)}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._rEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._rDel('${r.id}','rabbit_sales')">Del</button></div></div><div class="record-meta"><span class="profit-positive">Rev: ${UGX(r.revenue)}</span> ${r.costs?.total?`<span class="profit-negative">Cost: ${UGX(r.costs.total)}</span>`:''} <span class="${r.profit>=0?'profit-positive':'profit-negative'}">Net: ${UGX(r.profit||r.revenue)}</span></div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FISH MODULE
+// ═══════════════════════════════════════════════════════
+function renderFish() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let activeTab = 'records';
+  let showForm = false;
+  let editItem = null;
+
+  const render = () => {
+    const ponds = DB.get('fish_ponds');
+    const records = DB.get('fish_records');
+    const sales = DB.get('fish_sales');
+    const monthSales = filterByPeriod(sales,'month');
+    const totalRev = monthSales.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const totalCosts = filterByPeriod(records,'month').reduce((s,r)=>s+Number(r.costs?.total||0),0)+monthSales.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+
+    div.innerHTML = `
+    <div class="page-title">Fish Farming</div>
+    <div class="page-sub">Ponds, records & harvests</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Active Ponds</div><div class="stat-value" style="color:var(--blue);">${ponds.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Net (Month)</div><div class="stat-value" style="color:${totalRev-totalCosts>=0?'var(--teal)':'var(--red2)'};">${UGX(totalRev-totalCosts)}</div></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab ${activeTab==='ponds'?'active':''}" onclick="window._fTab('ponds')">Ponds</div>
+      <div class="tab ${activeTab==='records'?'active':''}" onclick="window._fTab('records')">Records</div>
+      <div class="tab ${activeTab==='sales'?'active':''}" onclick="window._fTab('sales')">Harvest/Sales</div>
+    </div>
+    ${showForm ? renderFishForm(activeTab, editItem, ponds) : `
+    <div class="section-header">
+      <span class="section-title">${activeTab}</span>
+      <button class="btn btn-primary btn-sm" onclick="window._fNew()">+ Add</button>
+    </div>`}
+    <div id="fish-list">${renderFishList(activeTab, ponds, records, sales)}</div>`;
+
+    window._fTab=t=>{activeTab=t;showForm=false;editItem=null;render();};
+    window._fNew=()=>{showForm=true;editItem=null;render();};
+    window._fEdit=id=>{const arr=activeTab==='ponds'?ponds:activeTab==='records'?records:sales;editItem=arr.find(r=>r.id===id);showForm=true;render();};
+    window._fDel=(id,key)=>{if(!confirm2('Delete?'))return;DB.delete(key,id);render();toast('Deleted ✓');};
+    window._fSave=()=>saveFishForm(activeTab,editItem,()=>{showForm=false;editItem=null;render();toast('Saved ✓');});
+    window._fCancel=()=>{showForm=false;editItem=null;render();};
+  };
+  render();
+  return div;
+}
+
+function renderFishForm(tab, e2, ponds) {
+  const e = e2 || {};
+  const pondOpts = ponds.map(p=>`<option value="${p.id}" ${e.pondId===p.id?'selected':''}>${p.name}</option>`).join('');
+  if(tab === 'ponds') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Pond</span><button class="close-btn" onclick="window._fCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Pond Name/ID</label><input type="text" id="f_name" value="${e.name||''}" placeholder="Pond 1"/></div>
+      <div class="field"><label>Size (m²)</label><input type="number" id="f_size" value="${e.size||''}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Fingerlings Stocked</label><input type="number" id="f_fing" value="${e.fingerlings||''}" placeholder="0"/></div>
+      <div class="field"><label>Species</label><input type="text" id="f_species" value="${e.species||''}" placeholder="Tilapia, Catfish..."/></div>
+    </div>
+    <div class="field"><label>Date Stocked</label><input type="date" id="f_date" value="${e.date||today()}"/></div>
+    ${costsFormHTML('f_')}
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._fSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._fCancel()">Cancel</button></div>
+  </div>`;
+
+  if(tab === 'records') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Record</span><button class="close-btn" onclick="window._fCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="f_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Pond</label><select id="f_pond"><option value="">Select pond</option>${pondOpts}</select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Feed Used (kg)</label><input type="number" id="f_feed" value="${e.feed||''}" placeholder="0"/></div>
+      <div class="field"><label>Mortality</label><input type="number" id="f_deaths" value="${e.deaths||0}" placeholder="0"/></div>
+    </div>
+    <div class="field"><label>Water/Health Notes</label><textarea id="f_notes" rows="2">${e.notes||''}</textarea></div>
+    ${costsFormHTML('f_')}
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._fSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._fCancel()">Cancel</button></div>
+  </div>`;
+
+  return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Harvest/Sale</span><button class="close-btn" onclick="window._fCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="f_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Pond</label><select id="f_pond"><option value="">Select</option>${pondOpts}</select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Kg Harvested</label><input type="number" id="f_kg" value="${e.kg||''}" oninput="window._fCalc()"/></div>
+      <div class="field"><label>Price/kg (UGX)</label><input type="number" id="f_price" value="${e.price||''}" oninput="window._fCalc()"/></div>
+    </div>
+    <div class="field"><label>Revenue</label><div class="readonly-field" id="f_rev">${e.revenue?UGX(e.revenue):'—'}</div></div>
+    <div class="field"><label>Buyer</label><input type="text" id="f_buyer" value="${e.buyer||''}" placeholder="Name"/></div>
+    ${costsFormHTML('f_')}
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._fSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._fCancel()">Cancel</button></div>
+  </div>`;
+}
+window._fCalc=()=>{const k=Number(document.getElementById('f_kg')?.value||0),p=Number(document.getElementById('f_price')?.value||0),el=document.getElementById('f_rev');if(el)el.textContent=k&&p?UGX(k*p):'—';};
+
+function saveFishForm(tab, editItem, cb) {
+  const id=editItem?.id||uid();
+  const date=document.getElementById('f_date')?.value; if(!date){toast('Set a date');return;}
+  const costs=getCosts('f_');
+  let rec;
+  if(tab==='ponds'){rec={id,date,name:document.getElementById('f_name')?.value,size:document.getElementById('f_size')?.value,fingerlings:document.getElementById('f_fing')?.value,species:document.getElementById('f_species')?.value,costs};if(editItem)DB.update('fish_ponds',id,rec);else DB.push('fish_ponds',rec);}
+  else if(tab==='records'){rec={id,date,pondId:document.getElementById('f_pond')?.value,feed:document.getElementById('f_feed')?.value,deaths:document.getElementById('f_deaths')?.value||0,notes:document.getElementById('f_notes')?.value,costs};if(editItem)DB.update('fish_records',id,rec);else DB.push('fish_records',rec);}
+  else{const kg=Number(document.getElementById('f_kg')?.value||0),price=Number(document.getElementById('f_price')?.value||0);rec={id,date,pondId:document.getElementById('f_pond')?.value,kg,price,revenue:kg*price,buyer:document.getElementById('f_buyer')?.value,costs};rec.profit=calcProfit(rec.revenue,costs.total);if(editItem)DB.update('fish_sales',id,rec);else DB.push('fish_sales',rec);}
+  cb();
+}
+
+function renderFishList(tab, ponds, records, sales) {
+  if(tab==='ponds'){if(!ponds.length)return'<div class="empty"><div class="empty-icon">🐟</div>No ponds added yet</div>';return ponds.map(p=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${p.name||'Unnamed'} · ${p.species||'—'}</div><div class="record-date">Stocked: ${fmt(p.date)} · ${fmtNum(p.fingerlings)} fingerlings · ${p.size}m²</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._fEdit('${p.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._fDel('${p.id}','fish_ponds')">Del</button></div></div></div>`).join('');}
+  if(tab==='records'){if(!records.length)return'<div class="empty"><div class="empty-icon">📋</div>No records yet</div>';return records.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${fmt(r.date)}</div><div class="record-date">Feed: ${r.feed||0}kg · Deaths: ${r.deaths||0}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._fEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._fDel('${r.id}','fish_records')">Del</button></div></div>${r.costs?.total?`<div class="record-meta"><span>💰 ${UGX(r.costs.total)}</span></div>`:''}</div>`).join('');}
+  if(!sales.length)return'<div class="empty"><div class="empty-icon">🎣</div>No harvests yet</div>';
+  return sales.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${fmt(r.date)} · ${r.buyer||'—'}</div><div class="record-date">${r.kg}kg @ ${UGX(r.price)}/kg</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._fEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._fDel('${r.id}','fish_sales')">Del</button></div></div><div class="record-meta"><span class="profit-positive">Rev: ${UGX(r.revenue)}</span> ${r.costs?.total?`<span class="profit-negative">Cost: ${UGX(r.costs.total)}</span>`:''} <span class="${(r.profit||0)>=0?'profit-positive':'profit-negative'}">Net: ${UGX(r.profit||r.revenue)}</span></div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// CROPS MODULE
+// ═══════════════════════════════════════════════════════
+function renderCrops() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let activeTab = 'records';
+  let showForm = false;
+  let editItem = null;
+
+  const render = () => {
+    const records = DB.get('crop_records');
+    const totalRev = records.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const totalCosts = records.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+
+    div.innerHTML = `
+    <div class="page-title">Crops</div>
+    <div class="page-sub">Planting, inputs, yield & sales</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Plots Tracked</div><div class="stat-value" style="color:var(--gold);">${records.length}</div></div>
+      <div class="stat-box"><div class="stat-label">Total Net</div><div class="stat-value" style="color:${totalRev-totalCosts>=0?'var(--teal)':'var(--red2)'};">${UGX(totalRev-totalCosts)}</div></div>
+    </div>
+    ${showForm ? renderCropForm(editItem) : `
+    <div class="section-header">
+      <span class="section-title">Crop Records</span>
+      <button class="btn btn-primary btn-sm" onclick="window._cNew()">+ Add Plot</button>
+    </div>`}
+    <div id="crop-list">${renderCropList(records)}</div>`;
+
+    window._cNew=()=>{showForm=true;editItem=null;render();};
+    window._cEdit=id=>{editItem=records.find(r=>r.id===id);showForm=true;render();};
+    window._cDel=id=>{if(!confirm2('Delete?'))return;DB.delete('crop_records',id);render();toast('Deleted ✓');};
+    window._cSave=()=>saveCropForm(editItem,()=>{showForm=false;editItem=null;render();toast('Saved ✓');});
+    window._cCancel=()=>{showForm=false;editItem=null;render();};
+    window._cCalc=()=>{const k=Number(document.getElementById('c_yield')?.value||0),p=Number(document.getElementById('c_price')?.value||0),el=document.getElementById('c_rev');if(el)el.textContent=k&&p?UGX(k*p):'—';};
+  };
+  render();
+  return div;
+}
+
+function renderCropForm(e2) {
+  const e = e2 || {};
+  return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Crop Record</span><button class="close-btn" onclick="window._cCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Crop Type</label><input type="text" id="c_crop" value="${e.crop||''}" placeholder="Maize, Beans..."/></div>
+      <div class="field"><label>Plot / Field</label><input type="text" id="c_plot" value="${e.plot||''}" placeholder="Plot A, Field 1"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Planting Date</label><input type="date" id="c_plant" value="${e.plantDate||today()}"/></div>
+      <div class="field"><label>Harvest Date</label><input type="date" id="c_harvest" value="${e.harvestDate||''}"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Seeds Used (kg)</label><input type="number" id="c_seeds" value="${e.seeds||''}" placeholder="0"/></div>
+      <div class="field"><label>Area (acres)</label><input type="number" id="c_area" value="${e.area||''}" placeholder="0" step="0.1"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Yield (kg)</label><input type="number" id="c_yield" value="${e.yield||''}" placeholder="0" oninput="window._cCalc()"/></div>
+      <div class="field"><label>Price/kg (UGX)</label><input type="number" id="c_price" value="${e.salePrice||''}" placeholder="0" oninput="window._cCalc()"/></div>
+    </div>
+    <div class="field"><label>Revenue</label><div class="readonly-field" id="c_rev">${e.revenue?UGX(e.revenue):'—'}</div></div>
+    <div class="field"><label>Fertilizer/Chemicals</label><input type="text" id="c_inputs" value="${e.inputs||''}" placeholder="DAP 50kg, Urea..."/></div>
+    ${costsFormHTML('c_')}
+    <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="c_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._cSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._cCancel()">Cancel</button></div>
+  </div>`;
+}
+
+function saveCropForm(editItem, cb) {
+  const id=editItem?.id||uid();
+  const plantDate=document.getElementById('c_plant')?.value; if(!plantDate){toast('Set planting date');return;}
+  const yld=Number(document.getElementById('c_yield')?.value||0);
+  const price=Number(document.getElementById('c_price')?.value||0);
+  const costs=getCosts('c_');
+  const rec={id,plantDate,harvestDate:document.getElementById('c_harvest')?.value,crop:document.getElementById('c_crop')?.value,plot:document.getElementById('c_plot')?.value,seeds:document.getElementById('c_seeds')?.value,area:document.getElementById('c_area')?.value,yield:yld,salePrice:price,revenue:yld*price,inputs:document.getElementById('c_inputs')?.value,notes:document.getElementById('c_notes')?.value,costs,date:document.getElementById('c_harvest')?.value||plantDate};
+  rec.profit=calcProfit(rec.revenue,costs.total);
+  if(editItem)DB.update('crop_records',id,rec);else DB.push('crop_records',rec);
+  cb();
+}
+
+function renderCropList(records) {
+  if(!records.length) return '<div class="empty"><div class="empty-icon">🌽</div>No crop records yet</div>';
+  return records.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${r.crop||'—'} · ${r.plot||'—'}</div><div class="record-date">Planted: ${fmt(r.plantDate)} ${r.harvestDate?'· Harvested: '+fmt(r.harvestDate):''}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._cEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._cDel('${r.id}')">Del</button></div></div><div class="record-meta">${r.yield?`<span>🌾 Yield: ${fmtNum(r.yield)}kg</span>`:''} ${r.revenue?`<span class="profit-positive">Rev: ${UGX(r.revenue)}</span>`:''} ${r.costs?.total?`<span class="profit-negative">Cost: ${UGX(r.costs.total)}</span>`:''} ${r.profit!==undefined?`<span class="${r.profit>=0?'profit-positive':'profit-negative'}">Net: ${UGX(r.profit)}</span>`:''}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// FARM SHOP MODULE
+// ═══════════════════════════════════════════════════════
+function renderShop() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let activeTab = 'sales';
+  let showForm = false;
+  let editItem = null;
+
+  const render = () => {
+    const stock = DB.get('shop_stock');
+    const sales = DB.get('shop_sales');
+    const monthSales = filterByPeriod(sales,'month');
+    const totalRev = monthSales.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const totalCost = monthSales.reduce((s,r)=>s+Number(r.purchase_cost||0),0);
+
+    div.innerHTML = `
+    <div class="page-title">Farm Shop</div>
+    <div class="page-sub">Stock, sales & revenue</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Revenue (Mo.)</div><div class="stat-value" style="color:var(--teal);font-size:16px;">${UGX(totalRev)}</div></div>
+      <div class="stat-box"><div class="stat-label">Net (Mo.)</div><div class="stat-value" style="color:${totalRev-totalCost>=0?'var(--teal)':'var(--red2)'};font-size:16px;">${UGX(totalRev-totalCost)}</div></div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab ${activeTab==='sales'?'active':''}" onclick="window._sTab('sales')">Sales</div>
+      <div class="tab ${activeTab==='stock'?'active':''}" onclick="window._sTab('stock')">Stock</div>
+    </div>
+    ${showForm ? renderShopForm(activeTab, editItem) : `
+    <div class="section-header">
+      <span class="section-title">${activeTab==='sales'?'Sales':'Stock'}</span>
+      <button class="btn btn-primary btn-sm" onclick="window._sNew()">+ Add</button>
+    </div>`}
+    <div id="shop-list">${renderShopList(activeTab, stock, sales)}</div>`;
+
+    window._sTab=t=>{activeTab=t;showForm=false;editItem=null;render();};
+    window._sNew=()=>{showForm=true;editItem=null;render();};
+    window._sEdit=id=>{const arr=activeTab==='sales'?sales:stock;editItem=arr.find(r=>r.id===id);showForm=true;render();};
+    window._sDel=(id,key)=>{if(!confirm2('Delete?'))return;DB.delete(key,id);render();toast('Deleted ✓');};
+    window._sSave=()=>saveShopForm(activeTab,editItem,()=>{showForm=false;editItem=null;render();toast('Saved ✓');});
+    window._sCancel=()=>{showForm=false;editItem=null;render();};
+    window._sCalc=()=>{const q=Number(document.getElementById('s_qty')?.value||0),p=Number(document.getElementById('s_price')?.value||0),el=document.getElementById('s_rev');if(el)el.textContent=q&&p?UGX(q*p):'—';};
+  };
+  render();
+  return div;
+}
+
+function renderShopForm(tab, e2) {
+  const e = e2 || {};
+  if(tab === 'sales') return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Sale</span><button class="close-btn" onclick="window._sCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="s_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Product</label><input type="text" id="s_product" value="${e.product||''}" placeholder="Eggs, Meat..."/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Qty Sold</label><input type="number" id="s_qty" value="${e.qty||''}" oninput="window._sCalc()"/></div>
+      <div class="field"><label>Price Each (UGX)</label><input type="number" id="s_price" value="${e.price||''}" oninput="window._sCalc()"/></div>
+    </div>
+    <div class="field"><label>Revenue</label><div class="readonly-field" id="s_rev">${e.revenue?UGX(e.revenue):'—'}</div></div>
+    <div class="field-row">
+      <div class="field"><label>Purchase Cost (UGX)</label><input type="number" id="s_pcost" value="${e.purchase_cost||''}" placeholder="0"/></div>
+      <div class="field"><label>Customer</label><input type="text" id="s_customer" value="${e.customer||''}" placeholder="Name"/></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._sSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._sCancel()">Cancel</button></div>
+  </div>`;
+
+  return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Stock Entry</span><button class="close-btn" onclick="window._sCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="s_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Product</label><input type="text" id="s_product" value="${e.product||''}" placeholder="Item name"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Qty In</label><input type="number" id="s_in" value="${e.qtyIn||''}" placeholder="0"/></div>
+      <div class="field"><label>Qty Out</label><input type="number" id="s_out" value="${e.qtyOut||''}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Unit</label><input type="text" id="s_unit" value="${e.unit||''}" placeholder="kg, trays..."/></div>
+      <div class="field"><label>Cost Price (UGX)</label><input type="number" id="s_pcost" value="${e.cost||''}" placeholder="0"/></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._sSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._sCancel()">Cancel</button></div>
+  </div>`;
+}
+
+function saveShopForm(tab, editItem, cb) {
+  const id=editItem?.id||uid();
+  const date=document.getElementById('s_date')?.value; if(!date){toast('Set a date');return;}
+  let rec;
+  if(tab==='sales'){const qty=Number(document.getElementById('s_qty')?.value||0),price=Number(document.getElementById('s_price')?.value||0);rec={id,date,product:document.getElementById('s_product')?.value,qty,price,revenue:qty*price,purchase_cost:Number(document.getElementById('s_pcost')?.value||0),customer:document.getElementById('s_customer')?.value};rec.profit=calcProfit(rec.revenue,rec.purchase_cost);if(editItem)DB.update('shop_sales',id,rec);else DB.push('shop_sales',rec);}
+  else{rec={id,date,product:document.getElementById('s_product')?.value,qtyIn:document.getElementById('s_in')?.value,qtyOut:document.getElementById('s_out')?.value,unit:document.getElementById('s_unit')?.value,cost:document.getElementById('s_pcost')?.value};if(editItem)DB.update('shop_stock',id,rec);else DB.push('shop_stock',rec);}
+  cb();
+}
+
+function renderShopList(tab, stock, sales) {
+  if(tab==='sales'){if(!sales.length)return'<div class="empty"><div class="empty-icon">🏪</div>No sales yet</div>';return sales.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${r.product||'—'} · ${r.customer||'—'}</div><div class="record-date">${fmt(r.date)} · ${r.qty} units @ ${UGX(r.price)}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._sEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._sDel('${r.id}','shop_sales')">Del</button></div></div><div class="record-meta"><span class="profit-positive">Rev: ${UGX(r.revenue)}</span> ${r.purchase_cost?`<span class="profit-negative">Cost: ${UGX(r.purchase_cost)}</span>`:''} <span class="${(r.profit||0)>=0?'profit-positive':'profit-negative'}">Net: ${UGX(r.profit||r.revenue)}</span></div></div>`).join('');}
+  if(!stock.length)return'<div class="empty"><div class="empty-icon">📦</div>No stock entries</div>';
+  const agg={};stock.forEach(r=>{if(!agg[r.product])agg[r.product]={in:0,out:0};agg[r.product].in+=Number(r.qtyIn||0);agg[r.product].out+=Number(r.qtyOut||0);});
+  const sHTML=Object.entries(agg).map(([p,s])=>`<div class="cost-item"><span>${p}</span><span style="color:var(--green);">${Math.max(0,s.in-s.out)} remaining</span></div>`).join('');
+  const lHTML=stock.map(r=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${r.product||'—'}</div><div class="record-date">${fmt(r.date)} · +${r.qtyIn||0} in · ${r.qtyOut||0} out ${r.unit||''}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._sEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._sDel('${r.id}','shop_stock')">Del</button></div></div></div>`).join('');
+  return `<div class="card" style="margin-bottom:12px;"><div class="card-title">Current Stock</div>${sHTML}</div>${lHTML}`;
+}
+
+// ═══════════════════════════════════════════════════════
+// FEED PRODUCTION MODULE
+// ═══════════════════════════════════════════════════════
+function renderFeed() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let showForm = false;
+  let editItem = null;
+
+  const render = () => {
+    const batches = DB.get('feed_batches');
+    const totalProduced = batches.reduce((s,r)=>s+Number(r.qty||0),0);
+    const totalCosts = batches.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+
+    div.innerHTML = `
+    <div class="page-title">Feed Production</div>
+    <div class="page-sub">Batches, ingredients & costs</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Total Produced (kg)</div><div class="stat-value" style="color:var(--gold);">${fmtNum(totalProduced)}</div></div>
+      <div class="stat-box"><div class="stat-label">Total Costs</div><div class="stat-value" style="color:var(--red2);font-size:16px;">${UGX(totalCosts)}</div></div>
+    </div>
+    ${showForm ? renderFeedForm(editItem) : `
+    <div class="section-header">
+      <span class="section-title">Production Batches</span>
+      <button class="btn btn-primary btn-sm" onclick="window._ffNew()">+ New Batch</button>
+    </div>`}
+    <div id="feed-list">${renderFeedList(batches)}</div>`;
+
+    window._ffNew=()=>{showForm=true;editItem=null;render();};
+    window._ffEdit=id=>{editItem=batches.find(r=>r.id===id);showForm=true;render();};
+    window._ffDel=id=>{if(!confirm2('Delete batch?'))return;DB.delete('feed_batches',id);render();toast('Deleted ✓');};
+    window._ffSave=()=>saveFeedForm(editItem,()=>{showForm=false;editItem=null;render();toast('Saved ✓');});
+    window._ffCancel=()=>{showForm=false;editItem=null;render();};
+  };
+  render();
+  return div;
+}
+
+function renderFeedForm(e2) {
+  const e = e2 || {};
+  return `
+  <div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Feed Batch</span><button class="close-btn" onclick="window._ffCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="ff_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Batch Name</label><input type="text" id="ff_name" value="${e.name||''}" placeholder="Batch #1, Starter..."/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Qty Produced (kg)</label><input type="number" id="ff_qty" value="${e.qty||''}" placeholder="0"/></div>
+      <div class="field"><label>For Module</label><select id="ff_module"><option value="">General</option><option ${e.module==='Poultry'?'selected':''}>Poultry</option><option ${e.module==='Rabbits'?'selected':''}>Rabbits</option><option ${e.module==='Fish'?'selected':''}>Fish</option></select></div>
+    </div>
+    <div class="field"><label>Ingredients Used</label><textarea id="ff_ingredients" rows="3" placeholder="Maize 30kg, Soybean meal 10kg, Premix 2kg...">${e.ingredients||''}</textarea></div>
+    ${costsFormHTML('ff_')}
+    <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="ff_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._ffSave()">💾 Save Batch</button><button class="btn btn-ghost" onclick="window._ffCancel()">Cancel</button></div>
+  </div>`;
+}
+
+function saveFeedForm(editItem, cb) {
+  const id=editItem?.id||uid();
+  const date=document.getElementById('ff_date')?.value; if(!date){toast('Set a date');return;}
+  const costs=getCosts('ff_');
+  const rec={id,date,name:document.getElementById('ff_name')?.value,qty:document.getElementById('ff_qty')?.value,module:document.getElementById('ff_module')?.value,ingredients:document.getElementById('ff_ingredients')?.value,notes:document.getElementById('ff_notes')?.value,costs};
+  if(editItem)DB.update('feed_batches',id,rec);else DB.push('feed_batches',rec);
+  cb();
+}
+
+function renderFeedList(batches) {
+  if(!batches.length) return '<div class="empty"><div class="empty-icon">🧪</div>No batches yet</div>';
+  return batches.map(b=>`<div class="record-item"><div class="record-header"><div><div class="record-title">${b.name||'Unnamed Batch'}</div><div class="record-date">${fmt(b.date)} · ${fmtNum(b.qty)}kg ${b.module?'→ '+b.module:''}</div></div><div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._ffEdit('${b.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._ffDel('${b.id}')">Del</button></div></div>${b.ingredients?`<div style="font-size:12px;color:var(--muted);margin-top:6px;">${b.ingredients}</div>`:''}<div class="record-meta">${b.costs?.total?`<span class="profit-negative">Cost: ${UGX(b.costs.total)}</span>`:''} ${b.costs?.feed?`<span>🌾 Ingredients: ${UGX(b.costs.feed)}</span>`:''}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// REPORTS & EXCEL EXPORT
+// ═══════════════════════════════════════════════════════
+function renderReports() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  div.innerHTML = `
+  <div class="page-title">Reports</div>
+  <div class="page-sub">Export data to Excel & backup</div>
+
+  <div class="card card-highlight" style="margin-bottom:14px;">
+    <div class="card-title">📊 Excel Export</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Generate a formatted Excel workbook with separate sheets for each module. Includes revenue, costs, and auto-calculated profit/loss.</p>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="exportExcel('all')">📥 Export All Modules</button>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Export by Module</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      ${[['poultry','🐔 Poultry'],['rabbits','🐇 Rabbits'],['fish','🐟 Fish'],['crops','🌽 Crops'],['shop','🏪 Shop'],['feed','🧪 Feed']].map(([k,l])=>`<button class="btn btn-ghost btn-sm" onclick="exportExcel('${k}')" style="justify-content:center;">${l}</button>`).join('')}
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title">💾 Data Backup</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Export all your farm data as a JSON file. Import it later to restore on this or another device.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="exportBackup()">📤 Export Backup (JSON)</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()">📥 Import Backup</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importBackup(event)"/>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📈 Quick Summary</div>
+    ${renderQuickSummary()}
+  </div>`;
+  return div;
+}
+
+function renderQuickSummary() {
+  const stats = getDashboardStats('all');
+  return `
+  <div class="summary-row"><span class="label">Total Revenue (All Time)</span><span class="value profit-positive">${UGX(stats.revenue)}</span></div>
+  <div class="summary-row"><span class="label">Total Costs (All Time)</span><span class="value profit-negative">${UGX(stats.costs)}</span></div>
+  <div class="summary-row"><span class="label">Net Profit/Loss</span><span class="value ${stats.profit>=0?'profit-positive':'profit-negative'}">${UGX(stats.profit)}</span></div>
+  ${Object.values(stats.modules).map(m=>`<div class="summary-row"><span class="label">${m.icon} ${m.label}</span><span class="value ${m.revenue-m.costs>=0?'profit-positive':'profit-negative'}">${UGX(m.revenue-m.costs)}</span></div>`).join('')}`;
+}
+
+function exportExcel(module) {
+  const wb = XLSX.utils.book_new();
+  const farmName = DB.getObj('settings').farmName || 'Farm';
+
+  function addSheet(name, data, cols) {
+    if(!data.length) { XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([cols,['No data']]), name); return; }
+    const rows = [cols, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    // Column widths
+    ws['!cols'] = cols.map(()=>({wch:18}));
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  }
+
+  const modules_to_export = module === 'all' ? ['poultry','rabbits','fish','crops','shop','feed'] : [module];
+
+  if(modules_to_export.includes('poultry')) {
+    addSheet('Poultry Daily', DB.get('poultry_daily').map(r=>[r.date,r.totalBirds,r.deaths,r.feedType,r.feedQty,r.water,r.costs?.feed||0,r.costs?.labour||0,r.costs?.health||0,r.costs?.other||0,r.costs?.total||0,r.notes]), ['Date','Total Birds','Deaths','Feed Type','Feed Qty(kg)','Water(L)','Feed Cost','Labour Cost','Health Cost','Other Cost','Total Cost','Notes']);
+    addSheet('Poultry Sales', DB.get('poultry_sales').map(r=>[r.date,r.buyer,r.qty,r.price,r.revenue,r.costs?.total||0,r.profit||0,r.notes]), ['Date','Buyer','Qty','Price/Bird','Revenue','Total Costs','Profit/Loss','Notes']);
+    addSheet('Poultry Inventory', DB.get('poultry_inventory').map(r=>[r.date,r.item,r.qtyIn,r.qtyOut,r.unit,r.supplier,r.costs?.total||0]), ['Date','Item','Qty In','Qty Used','Unit','Supplier','Cost']);
+  }
+  if(modules_to_export.includes('rabbits')) {
+    addSheet('Rabbit Records', DB.get('rabbit_records').map(r=>[r.date,r.adults,r.kits,r.deaths,r.male,r.female,r.feed,r.feedQty,r.costs?.total||0,r.notes]), ['Date','Adults','Kits','Deaths','Male','Female','Feed','Feed Qty','Total Cost','Notes']);
+    addSheet('Rabbit Sales', DB.get('rabbit_sales').map(r=>[r.date,r.buyer,r.qty,r.price,r.revenue,r.costs?.total||0,r.profit||0,r.notes]), ['Date','Buyer','Qty','Price Each','Revenue','Total Costs','Profit/Loss','Notes']);
+  }
+  if(modules_to_export.includes('fish')) {
+    addSheet('Fish Ponds', DB.get('fish_ponds').map(r=>[r.date,r.name,r.species,r.fingerlings,r.size,r.costs?.total||0]), ['Date Stocked','Pond Name','Species','Fingerlings','Size(m²)','Setup Cost']);
+    addSheet('Fish Records', DB.get('fish_records').map(r=>[r.date,r.pondId,r.feed,r.deaths,r.costs?.total||0,r.notes]), ['Date','Pond','Feed(kg)','Deaths','Total Cost','Notes']);
+    addSheet('Fish Sales', DB.get('fish_sales').map(r=>[r.date,r.pondId,r.buyer,r.kg,r.price,r.revenue,r.costs?.total||0,r.profit||0]), ['Date','Pond','Buyer','Kg Harvested','Price/kg','Revenue','Total Costs','Profit/Loss']);
+  }
+  if(modules_to_export.includes('crops')) {
+    addSheet('Crop Records', DB.get('crop_records').map(r=>[r.plantDate,r.harvestDate,r.crop,r.plot,r.area,r.seeds,r.inputs,r.yield,r.salePrice,r.revenue,r.costs?.total||0,r.profit||0,r.notes]), ['Plant Date','Harvest Date','Crop','Plot','Area(acres)','Seeds(kg)','Inputs','Yield(kg)','Price/kg','Revenue','Total Costs','Profit/Loss','Notes']);
+  }
+  if(modules_to_export.includes('shop')) {
+    addSheet('Shop Sales', DB.get('shop_sales').map(r=>[r.date,r.product,r.customer,r.qty,r.price,r.revenue,r.purchase_cost||0,r.profit||0]), ['Date','Product','Customer','Qty','Price','Revenue','Purchase Cost','Profit/Loss']);
+    addSheet('Shop Stock', DB.get('shop_stock').map(r=>[r.date,r.product,r.qtyIn,r.qtyOut,r.unit,r.cost||0]), ['Date','Product','Qty In','Qty Out','Unit','Cost Price']);
+  }
+  if(modules_to_export.includes('feed')) {
+    addSheet('Feed Production', DB.get('feed_batches').map(r=>[r.date,r.name,r.qty,r.module,r.ingredients,r.costs?.feed||0,r.costs?.labour||0,r.costs?.other||0,r.costs?.total||0,r.notes]), ['Date','Batch Name','Qty(kg)','For Module','Ingredients','Feed/Ingredient Cost','Labour Cost','Other Cost','Total Cost','Notes']);
+  }
+
+  // Summary sheet
+  const stats = getDashboardStats('all');
+  const summaryData = [
+    ['Farm Manager Export', `Generated: ${new Date().toLocaleDateString()}`,'',''],
+    [''],
+    ['Module','Total Revenue','Total Costs','Net Profit/Loss'],
+    ...Object.values(stats.modules).map(m=>[m.icon+' '+m.label, m.revenue, m.costs, m.revenue-m.costs]),
+    [''],
+    ['TOTAL', stats.revenue, stats.costs, stats.profit]
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{wch:20},{wch:18},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  const fname = `${farmName.replace(/\s/g,'_')}_${module}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  toast('Excel exported! ✓');
+}
+
+function exportBackup() {
+  const data = DB.exportAll();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `farm_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup exported! ✓');
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!confirm2('This will replace ALL current data. Continue?')) return;
+      DB.importAll(data);
+      toast('Backup restored! ✓');
+      showPage('dashboard');
+    } catch(err) { toast('Invalid backup file'); }
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function renderSettings() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  const s = DB.getObj('settings');
+
+  div.innerHTML = `
+  <div class="page-title">Settings</div>
+  <div class="page-sub">Farm profile & preferences</div>
+
+  <div class="card card-highlight" style="margin-bottom:14px;">
+    <div class="card-title">🖼 Farm Icon</div>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+      <div id="icon-preview" style="width:72px;height:72px;border-radius:16px;overflow:hidden;background:var(--bg);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:32px;">${s.farmIcon?`<img src="${s.farmIcon}" style="width:100%;height:100%;object-fit:cover;"/>`:'🌿'}</div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--text);">${s.farmIcon?'✅ Custom photo set':'Default icon'}</div><div style="font-size:11px;color:var(--muted);margin-top:3px;">Shown in app header</div></div>
+    </div>
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green2);color:#fff;border:none;">
+      📷 Upload Farm Photo
+      <input type="file" accept="image/*" style="display:none;" onchange="window._uploadIcon(event)"/>
+    </label>
+    ${s.farmIcon?`<button class="btn btn-danger btn-sm" style="margin-left:8px;" onclick="window._removeIcon()">Remove</button>`:''}
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title">Farm Details</div>
+    <div class="field"><label>Farm Name</label><input type="text" id="s_name" value="${s.farmName||''}" placeholder="My Farm"/></div>
+    <div class="field"><label>Farmer Name</label><input type="text" id="s_farmer" value="${s.farmerName||''}" placeholder="Your name"/></div>
+    <div class="field"><label>Initial Poultry Bird Count</label><input type="number" id="s_birds" value="${s.initialBirds||''}" placeholder="500"/><div class="field-hint">Used to calculate birds alive on poultry dashboard</div></div>
+    <div class="field"><label>Location</label><input type="text" id="s_loc" value="${s.location||''}" placeholder="District, Country"/></div>
+    <button class="btn btn-primary" onclick="window._saveSettings()">💾 Save Settings</button>
+  </div>
+
+  <div class="card" style="border-color:var(--red);">
+    <div class="card-title" style="color:var(--red2);">⚠ Danger Zone</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Permanently delete all farm data. This cannot be undone.</p>
+    <button class="btn btn-danger" onclick="window._clearAll()">🗑 Clear All Data</button>
+  </div>`;
+
+  window._saveSettings = () => {
+    const settings = {
+      farmName: document.getElementById('s_name').value,
+      farmerName: document.getElementById('s_farmer').value,
+      initialBirds: document.getElementById('s_birds').value,
+      location: document.getElementById('s_loc').value,
+      farmIcon: DB.getObj('settings').farmIcon || ''
+    };
+    DB.set('settings', settings);
+    document.getElementById('header-title').textContent = settings.farmName || 'Farm Manager';
+    applyFarmIcon(settings.farmIcon);
+    toast('Settings saved ✓');
+  };
+
+  window._uploadIcon = async (event) => {
+    const file = event.target.files[0]; if(!file) return;
+    const dataUrl = await cropSquare(file, 512);
+    const settings = {...DB.getObj('settings'), farmIcon: dataUrl};
+    DB.set('settings', settings);
+    applyFarmIcon(dataUrl);
+    renderSettings(); showPage('settings');
+    toast('Icon updated ✓');
+  };
+
+  window._removeIcon = () => {
+    const settings = {...DB.getObj('settings'), farmIcon: ''};
+    DB.set('settings', settings);
+    applyFarmIcon('');
+    showPage('settings');
+  };
+
+  window._clearAll = () => {
+    if(!confirm2('DELETE ALL data permanently?')) return;
+    if(!confirm2('Are you absolutely sure? This cannot be undone.')) return;
+    ['poultry_daily','poultry_inventory','poultry_sales','rabbit_records','rabbit_sales','fish_ponds','fish_records','fish_sales','crop_records','shop_stock','shop_sales','feed_batches'].forEach(k=>DB.set(k,[]));
+    toast('All data cleared ✓');
+    showPage('dashboard');
+  };
+
+  return div;
+}
+
+function applyFarmIcon(dataUrl) {
+  const logo = document.getElementById('header-logo');
+  if(dataUrl) logo.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`;
+  else logo.innerHTML = '🌿';
+}
+
+async function cropSquare(file, size=512) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width-min)/2, sy = (img.height-min)/2;
+      ctx.drawImage(img,sx,sy,min,min,0,0,size,size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg',0.85));
+    };
+    img.src = url;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+async function init() {
+  await DB.init();
+
+  // Apply saved farm icon
+  const settings = DB.getObj('settings');
+  if(settings.farmIcon) applyFarmIcon(settings.farmIcon);
+  if(settings.farmName) document.getElementById('header-title').textContent = settings.farmName;
+
+  // Show app
+  document.getElementById('app').style.display = 'flex';
+  showPage('dashboard');
+
+  // Hide splash
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    splash.classList.add('hidden');
+    setTimeout(() => splash.remove(), 500);
+  }, 600);
+}
+
+init();
+</script>
+</body>
+</html>
