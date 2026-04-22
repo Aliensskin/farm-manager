@@ -1,10 +1,11 @@
 {
     "name": "Farm Manager",
-    "short_name": "FarmMgr",
-    "start_url": ".",
+    "short_name": "FarmApp",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#0f1a0a",
     "theme_color": "#0f1a0a",
+    "orientation": "portrait",
     "icons": [
       {
         "src": "icon.png",

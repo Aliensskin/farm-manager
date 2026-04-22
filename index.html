@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1a0a">
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -11,7 +13,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700;900&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="manifest" href="manifest.json">
 <style>
 :root{
   --bg:#0f1a0a;--surface:#172010;--card:#1e2d14;--card2:#243318;
@@ -70,7 +71,7 @@ h1,h2,h3,h4{font-family:'Bitter',serif;}
 .field-hint{font-size:11px;color:var(--dim);margin-top:3px;}
 input,select,textarea{width:100%;padding:9px 12px;background:#1a2810;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;outline:none;font-family:inherit;transition:border-color .15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--green);}
-textarea{resize:vertical;}
+textarea{resize:vertical;rows:3;}
 select option{background:#1e2d14;}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .field-row.three{grid-template-columns:1fr 1fr 1fr;}
@@ -174,12 +175,7 @@ select option{background:#1e2d14;}
 </style>
 </head>
 <body>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("SW registered"));
-    }
-    </script>
+
 <div id="splash">
   <div class="splash-icon">🌿</div>
   <div class="splash-title">Farm Manager</div>
@@ -1504,5 +1500,14 @@ async function init() {
 
 init();
 </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log('Service Worker Registered'))
+        .catch(err => console.log('SW failed:', err));
+    });
+  }
+  </script>
 </body>
 </html>
