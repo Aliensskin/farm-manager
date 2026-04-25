@@ -71,7 +71,7 @@ h1,h2,h3,h4{font-family:'Bitter',serif;}
 .field-hint{font-size:11px;color:var(--dim);margin-top:3px;}
 input,select,textarea{width:100%;padding:9px 12px;background:#1a2810;border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:14px;outline:none;font-family:inherit;transition:border-color .15s;}
 input:focus,select:focus,textarea:focus{border-color:var(--green);}
-textarea{resize:vertical;rows:3;}
+textarea{resize:vertical;}
 select option{background:#1e2d14;}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .field-row.three{grid-template-columns:1fr 1fr 1fr;}
@@ -231,6 +231,17 @@ select option{background:#1e2d14;}
 <div id="toast"></div>
 
 <script>
+  self.addEventListener("install", (e) => {
+  console.log("Service Worker installed");
+});
+
+self.addEventListener("fetch", (e) => {});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log("SW registered"));
+}
+
 // ═══════════════════════════════════════════════════════
 // STORAGE ENGINE (IndexedDB with localStorage fallback)
 // ═══════════════════════════════════════════════════════
@@ -1476,26 +1487,180 @@ async function cropSquare(file, size=512) {
 }
 
 // ═══════════════════════════════════════════════════════
+// LICENSE KEY SYSTEM
+// Format: FARM-UG-XXXX-YYYY
+// YYYY = hex checksum of XXXX (sum of char values × 7, last 4 hex chars)
+// ═══════════════════════════════════════════════════════
+const LIC = {
+  _sk: 'fm_lic_v1',
+
+  // Generate a device fingerprint from browser properties
+  deviceId() {
+    const raw = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || 0,
+      navigator.platform || ''
+    ].join('|');
+    // Simple hash
+    let h = 0x811c9dc5;
+    for(let i = 0; i < raw.length; i++) {
+      h ^= raw.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    return h.toString(16).toUpperCase().padStart(8, '0');
+  },
+
+  // Compute checksum for a 4-char base
+  _checksum(base) {
+    let sum = 0;
+    for(const ch of base.toUpperCase()) {
+      const n = parseInt(ch, 10);
+      sum += isNaN(n) ? (ch.charCodeAt(0) - 64) : n; // A=1..Z=26, digits as-is
+    }
+    const val = (sum * 7) >>> 0;
+    return val.toString(16).toUpperCase().padStart(4, '0').slice(-4);
+  },
+
+  // Validate key format and checksum
+  validate(key) {
+    if(!key) return false;
+    const parts = key.trim().toUpperCase().split('-');
+    if(parts.length !== 4 || parts[0] !== 'FARM' || parts[1] !== 'UG') return false;
+    const base = parts[2], check = parts[3];
+    if(base.length !== 4 || check.length !== 4) return false;
+    return this._checksum(base) === check;
+  },
+
+  // Load stored license from localStorage (obfuscated with btoa)
+  load() {
+    try {
+      const raw = localStorage.getItem(this._sk);
+      if(!raw) return null;
+      return JSON.parse(atob(raw));
+    } catch(e) { return null; }
+  },
+
+  // Save license (obfuscated)
+  save(key) {
+    const data = { key, deviceId: this.deviceId(), activatedAt: Date.now(), activated: true };
+    localStorage.setItem(this._sk, btoa(JSON.stringify(data)));
+    return data;
+  },
+
+  // Check if current device is licensed
+  isActivated() {
+    const lic = this.load();
+    if(!lic || !lic.activated) return { ok: false, reason: 'not_activated' };
+    if(lic.deviceId !== this.deviceId()) return { ok: false, reason: 'wrong_device' };
+    return { ok: true };
+  },
+
+  // Revoke (for testing/reset)
+  revoke() { localStorage.removeItem(this._sk); }
+};
+
+// ── License Screen ────────────────────────────────────
+function showLicenseScreen(reason) {
+  const splash = document.getElementById('splash');
+  if(splash) splash.remove();
+
+  const isWrongDevice = reason === 'wrong_device';
+
+  const screen = document.createElement('div');
+  screen.id = 'license-screen';
+  screen.style.cssText = `position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;z-index:9999;`;
+
+  screen.innerHTML = `
+    <div style="width:72px;height:72px;background:var(--green2);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:20px;box-shadow:0 8px 32px rgba(90,152,40,.3);">🌿</div>
+    <div style="font-family:'Bitter',serif;font-size:24px;font-weight:900;color:var(--green3);margin-bottom:6px;">Farm Manager</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:32px;text-align:center;">${isWrongDevice ? '⚠️ License not valid on this device' : 'Enter your activation key to continue'}</div>
+
+    ${isWrongDevice ? `
+    <div style="background:#c8505022;border:1px solid var(--red);border-radius:12px;padding:16px 20px;margin-bottom:24px;text-align:center;max-width:340px;">
+      <div style="color:var(--red2);font-weight:700;font-size:14px;margin-bottom:4px;">Device Mismatch</div>
+      <div style="color:var(--muted);font-size:12px;line-height:1.6;">This license was activated on a different device. Please use a new key for this device.</div>
+    </div>` : ''}
+
+    <div style="width:100%;max-width:340px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Activation Key</div>
+      <input id="lic-input" type="text" placeholder="FARM-UG-XXXX-YYYY"
+        style="width:100%;padding:14px 16px;background:#1a2810;border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:16px;outline:none;font-family:'Bitter',serif;font-weight:700;letter-spacing:.08em;text-align:center;text-transform:uppercase;margin-bottom:8px;"
+        oninput="this.value=this.value.toUpperCase();window._licPreview(this.value)"
+        onkeydown="if(event.key==='Enter')window._licActivate()"/>
+      <div id="lic-status" style="font-size:12px;text-align:center;min-height:18px;margin-bottom:16px;"></div>
+      <button onclick="window._licActivate()"
+        style="width:100%;padding:14px;background:var(--green2);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Bitter',serif;letter-spacing:.04em;">
+        🔓 Activate
+      </button>
+    </div>
+
+    <div style="margin-top:28px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;max-width:340px;width:100%;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Your Device ID</div>
+      <div style="font-family:'Bitter',serif;font-size:13px;color:var(--text2);letter-spacing:.1em;">${LIC.deviceId()}</div>
+      <div style="font-size:11px;color:var(--dim);margin-top:4px;">Share this with your supplier to get a key</div>
+    </div>`;
+
+  document.body.appendChild(screen);
+
+  window._licPreview = val => {
+    const el = document.getElementById('lic-status');
+    if(!el) return;
+    const clean = val.trim().toUpperCase();
+    if(!clean) { el.textContent=''; return; }
+    if(clean.length < 14) { el.style.color='var(--muted)'; el.textContent='Keep typing...'; return; }
+    if(LIC.validate(clean)) { el.style.color='var(--teal)'; el.textContent='✓ Valid key format'; }
+    else { el.style.color='var(--red2)'; el.textContent='✗ Invalid key'; }
+  };
+
+  window._licActivate = () => {
+    const input = document.getElementById('lic-input');
+    const status = document.getElementById('lic-status');
+    const key = input?.value?.trim().toUpperCase();
+    if(!key) { status.style.color='var(--red2)'; status.textContent='Please enter your activation key'; return; }
+    if(!LIC.validate(key)) { status.style.color='var(--red2)'; status.textContent='✗ Invalid key — check and try again'; input.style.borderColor='var(--red)'; return; }
+    // Valid!
+    LIC.save(key);
+    input.style.borderColor='var(--teal)';
+    status.style.color='var(--teal)';
+    status.textContent='✓ Activated! Loading...';
+    setTimeout(() => {
+      document.getElementById('license-screen')?.remove();
+      bootApp();
+    }, 900);
+  };
+}
+
+// ── Boot the actual app after license check ───────────
+async function bootApp() {
+  const settings = DB.getObj('settings');
+  if(settings.farmIcon) applyFarmIcon(settings.farmIcon);
+  if(settings.farmName) document.getElementById('header-title').textContent = settings.farmName;
+  document.getElementById('app').style.display = 'flex';
+  showPage('dashboard');
+}
+
+// ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
 async function init() {
   await DB.init();
 
-  // Apply saved farm icon
-  const settings = DB.getObj('settings');
-  if(settings.farmIcon) applyFarmIcon(settings.farmIcon);
-  if(settings.farmName) document.getElementById('header-title').textContent = settings.farmName;
-
-  // Show app
-  document.getElementById('app').style.display = 'flex';
-  showPage('dashboard');
-
-  // Hide splash
+  // Hide splash after short delay then check license
   setTimeout(() => {
     const splash = document.getElementById('splash');
-    splash.classList.add('hidden');
-    setTimeout(() => splash.remove(), 500);
-  }, 600);
+    if(splash) { splash.classList.add('hidden'); setTimeout(()=>splash.remove(), 400); }
+
+    const check = LIC.isActivated();
+    if(check.ok) {
+      bootApp();
+    } else {
+      showLicenseScreen(check.reason);
+    }
+  }, 700);
 }
 
 init();
