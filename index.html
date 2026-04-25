@@ -1487,31 +1487,36 @@ async function cropSquare(file, size=512) {
 }
 
 // ═══════════════════════════════════════════════════════
-// LICENSE KEY SYSTEM
+// LICENSE KEY SYSTEM  (Privacy-compliant — Android 10+)
 // Format: FARM-UG-XXXX-YYYY
-// YYYY = hex checksum of XXXX (sum of char values × 7, last 4 hex chars)
+// YYYY = hex checksum of XXXX (sum of char values x 7, last 4 hex chars)
+//
+// Device ID: uses crypto.randomUUID() stored persistently in
+// localStorage — no browser fingerprinting, no tracking APIs.
+// Complies with Android privacy model & Chrome privacy sandbox.
 // ═══════════════════════════════════════════════════════
 const LIC = {
-  _sk: 'fm_lic_v1',
+  _sk:  'fm_lic_v1',   // license record key
+  _dk:  'fm_did_v1',   // device id key (separate, never changes)
 
-  // Generate a device fingerprint from browser properties
+  // Device ID: generated once on first launch, stored permanently.
+  // Uses Web Crypto API — cryptographically random, privacy-safe.
+  // Does NOT read userAgent, screen size, hardware info, or any
+  // identifier that modern Android/Chrome restricts.
   deviceId() {
-    const raw = [
-      navigator.userAgent,
-      navigator.language,
-      screen.width + 'x' + screen.height,
-      screen.colorDepth,
-      new Date().getTimezoneOffset(),
-      navigator.hardwareConcurrency || 0,
-      navigator.platform || ''
-    ].join('|');
-    // Simple hash
-    let h = 0x811c9dc5;
-    for(let i = 0; i < raw.length; i++) {
-      h ^= raw.charCodeAt(i);
-      h = (h * 0x01000193) >>> 0;
+    let id = localStorage.getItem(this._dk);
+    if(id) return id;
+    // Generate a new permanent random ID for this device/browser
+    if(typeof crypto !== 'undefined' && crypto.randomUUID) {
+      id = crypto.randomUUID().replace(/-/g,'').toUpperCase().slice(0,16);
+    } else {
+      // Fallback: crypto.getRandomValues
+      const arr = new Uint8Array(8);
+      (crypto || window.crypto).getRandomValues(arr);
+      id = Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();
     }
-    return h.toString(16).toUpperCase().padStart(8, '0');
+    localStorage.setItem(this._dk, id);
+    return id;
   },
 
   // Compute checksum for a 4-char base
