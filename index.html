@@ -162,6 +162,37 @@ select option{background:#1e2d14;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
+
+/* ── Alerts ── */
+.alert-bar{background:#c8505018;border:1px solid var(--red);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;font-size:13px;}
+.alert-bar .alert-icon{font-size:18px;flex-shrink:0;}
+.alert-bar .alert-text{color:var(--text2);flex:1;}
+.alert-bar.warn{background:#d4a93518;border-color:var(--gold);}
+.alert-bar.warn .alert-text{color:var(--gold);}
+
+/* ── Mini chart bars ── */
+.chart-wrap{overflow:hidden;}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:8px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.bar-fill{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .3s;}
+.bar-label{font-size:9px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center;}
+.bar-val{font-size:9px;color:var(--muted);}
+
+/* ── Search bar ── */
+.search-bar{display:flex;gap:8px;margin-bottom:12px;}
+.search-bar input{flex:1;padding:8px 12px;font-size:13px;}
+.search-bar select{width:auto;padding:8px 10px;font-size:13px;}
+
+/* ── Weekly summary rows ── */
+.week-row{background:var(--card2);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;font-size:13px;}
+.week-row-title{font-weight:700;color:var(--text2);margin-bottom:4px;}
+.week-row-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+
+/* ── Enterprise custom tile ── */
+.ent-tile-custom{border-style:dashed;}
+.add-ent-btn{border:2px dashed var(--border2);background:transparent;border-radius:var(--radius);padding:12px 8px;text-align:center;cursor:pointer;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.add-ent-btn:active{border-color:var(--green);color:var(--green);}
+
 /* animations */
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .fade-in{animation:fadeIn .25s ease both;}
@@ -220,6 +251,7 @@ select option{background:#1e2d14;}
 
 <!-- More menu overlay -->
 <div id="more-menu" style="display:none;position:fixed;bottom:65px;right:12px;background:var(--card);border:1px solid var(--border2);border-radius:var(--radius2);padding:8px;z-index:200;min-width:160px;box-shadow:var(--shadow);">
+  <button onclick="showPage('inventory');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">📦 Inventory</button>
   <button onclick="showPage('fish');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🐟 Fish Farming</button>
   <button onclick="showPage('crops');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🌽 Crops</button>
   <button onclick="showPage('shop');toggleMoreMenu()" style="display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;color:var(--text);cursor:pointer;font-family:inherit;font-size:14px;border-radius:6px;">🏪 Farm Shop</button>
@@ -231,7 +263,7 @@ select option{background:#1e2d14;}
 <div id="toast"></div>
 
 <script>
-  self.addEventListener("install", (e) => {
+self.addEventListener("install", (e) => {
   console.log("Service Worker installed");
 });
 
@@ -254,7 +286,8 @@ const DB = {
       // Try to load from localStorage
       const keys = ['settings','poultry_daily','poultry_inventory','poultry_sales',
         'rabbit_records','rabbit_sales','fish_ponds','fish_records','fish_sales',
-        'crop_plots','crop_records','shop_stock','shop_sales','feed_batches'];
+        'crop_plots','crop_records','shop_stock','shop_sales','feed_batches',
+        'custom_enterprises','global_inventory'];
       keys.forEach(k => {
         try { this._data[k] = JSON.parse(localStorage.getItem('fm_'+k)||'[]'); }
         catch(e) { this._data[k] = []; }
@@ -357,13 +390,14 @@ function showPage(page) {
     document.getElementById('nav-more').classList.add('active');
   }
   // Update header title
-  const titles = {dashboard:'Farm Manager',poultry:'🐔 Poultry',rabbits:'🐇 Rabbits',fish:'🐟 Fish Farming',crops:'🌽 Crops',shop:'🏪 Farm Shop',feed:'🧪 Feed Production',reports:'📊 Reports',settings:'⚙️ Settings'};
+  const titles = {dashboard:'Farm Manager',poultry:'🐔 Poultry',rabbits:'🐇 Rabbits',fish:'🐟 Fish Farming',crops:'🌽 Crops',shop:'🏪 Farm Shop',feed:'🧪 Feed Production',reports:'📊 Reports',settings:'⚙️ Settings',inventory:'📦 Inventory',enterprises:'🏭 Enterprises'};
   document.getElementById('header-title').textContent = titles[page] || 'Farm Manager';
   // Render
   const content = document.getElementById('content');
   content.innerHTML = '';
-  const pages = {dashboard: renderDashboard, poultry: renderPoultry, rabbits: renderRabbits, fish: renderFish, crops: renderCrops, shop: renderShop, feed: renderFeed, reports: renderReports, settings: renderSettings};
+  const pages = {dashboard: renderDashboard, poultry: renderPoultry, rabbits: renderRabbits, fish: renderFish, crops: renderCrops, shop: renderShop, feed: renderFeed, reports: renderReports, settings: renderSettings, inventory: renderInventory, enterprises: renderEnterprises};
   if(pages[page]) { const el = pages[page](); el.classList.add('fade-in'); content.appendChild(el); }
+  else if(page.startsWith('ent_')) { const el = renderCustomEnterprise(page); el.classList.add('fade-in'); content.appendChild(el); }
 }
 
 function goSettings() { showPage('settings'); }
@@ -457,10 +491,347 @@ function getDashboardStats(period='month') {
   const fdCost = fbatches.reduce((s,r)=>s+Number(r.costs?.total||0),0);
   stats.modules.feed = {revenue:0, costs:fdCost, label:'Feed Prod.', icon:'🧪'};
 
+  // Custom enterprises
+  const customEnts = DB.get('custom_enterprises');
+  customEnts.forEach(ent => {
+    const records = filterByPeriod(DB.get('ent_'+ent.id), period);
+    const rev  = records.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const cost = records.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+    stats.modules['ent_'+ent.id] = {revenue:rev, costs:cost, label:ent.name, icon:ent.icon||'🌾'};
+  });
+
   Object.values(stats.modules).forEach(m => { stats.revenue += m.revenue; stats.costs += m.costs; });
   stats.profit = stats.revenue - stats.costs;
   return stats;
 }
+
+// ── ALERTS ENGINE ──────────────────────────────────────
+function getAlerts() {
+  const alerts = [];
+  const daily = DB.get('poultry_daily');
+  const inv   = DB.get('global_inventory');
+  const recs  = DB.get('rabbit_records');
+
+  // High mortality — poultry: >5% deaths in last record
+  if(daily.length) {
+    const last = daily[0];
+    const pct = last.totalBirds ? (Number(last.deaths||0)/Number(last.totalBirds))*100 : 0;
+    if(pct > 5) alerts.push({type:'danger', icon:'💀', text:`High poultry mortality: ${last.deaths} deaths on ${fmt(last.date)} (${pct.toFixed(1)}%)`});
+  }
+
+  // High mortality — rabbits
+  if(recs.length) {
+    const last = recs[0];
+    if(Number(last.deaths||0) > 3) alerts.push({type:'danger', icon:'⚠️', text:`Rabbit mortality alert: ${last.deaths} deaths on ${fmt(last.date)}`});
+  }
+
+  // Low inventory stock (global inventory)
+  const stockMap = {};
+  inv.forEach(r => {
+    if(!stockMap[r.item]) stockMap[r.item]={in:0,out:0};
+    stockMap[r.item].in  += Number(r.qtyIn||0);
+    stockMap[r.item].out += Number(r.qtyOut||0);
+  });
+  Object.entries(stockMap).forEach(([item,s]) => {
+    const rem = s.in - s.out;
+    const pct = s.in ? (rem/s.in)*100 : 0;
+    if(s.in > 0 && pct < 20) alerts.push({type:'warn', icon:'📦', text:`Low stock: ${item} — only ${rem} remaining (${pct.toFixed(0)}%)`});
+  });
+
+  // Unusual feed usage — if today's feed > 2× average
+  if(daily.length > 3) {
+    const avg = daily.slice(1,8).reduce((s,r)=>s+Number(r.feedQty||0),0) / Math.min(7,daily.length-1);
+    const last = daily[0];
+    if(avg > 0 && Number(last.feedQty||0) > avg*2) alerts.push({type:'warn', icon:'🌾', text:`Unusual feed usage: ${last.feedQty}kg today vs avg ${avg.toFixed(1)}kg`});
+  }
+
+  return alerts;
+}
+
+
+// ── WEEKLY SUMMARY ─────────────────────────────────────
+function renderWeeklySummary() {
+  const now = new Date();
+  const weeks = [];
+  for(let w=0;w<4;w++){
+    const start = new Date(now); start.setDate(now.getDate() - now.getDay() - w*7);
+    const end   = new Date(start); end.setDate(start.getDate()+6);
+    const label = w===0?'This Week':w===1?'Last Week':`${fmt(start.toISOString().slice(0,10))}`;
+    const allSales = [...DB.get('poultry_sales'),...DB.get('rabbit_sales'),...DB.get('fish_sales'),...DB.get('shop_sales')];
+    const allCosts = [...DB.get('poultry_daily'),...DB.get('rabbit_records'),...DB.get('fish_records')];
+    const wSales = allSales.filter(r=>{ const d=new Date(r.date+'T00:00:00'); return d>=start&&d<=end; });
+    const wCosts = allCosts.filter(r=>{ const d=new Date(r.date+'T00:00:00'); return d>=start&&d<=end; });
+    const rev  = wSales.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const cost = wCosts.reduce((s,r)=>s+Number(r.costs?.total||0),0)+wSales.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+    const deaths = DB.get('poultry_daily').filter(r=>{ const d=new Date(r.date+'T00:00:00'); return d>=start&&d<=end; }).reduce((s,r)=>s+Number(r.deaths||0),0);
+    weeks.push({label,rev,cost,deaths,profit:rev-cost});
+  }
+  if(weeks.every(w=>w.rev===0&&w.cost===0)) return '<div style="font-size:13px;color:var(--dim);">No data yet for weekly breakdown.</div>';
+  return weeks.map(w=>`<div class="week-row">
+    <div class="week-row-title">${w.label}</div>
+    <div class="week-row-meta">
+      <span class="profit-positive">Rev: ${UGX(w.rev)}</span>
+      <span class="profit-negative">Cost: ${UGX(w.cost)}</span>
+      <span class="${w.profit>=0?'profit-positive':'profit-negative'}">Net: ${UGX(w.profit)}</span>
+      ${w.deaths?`<span style="color:var(--red2);">Deaths: ${w.deaths}</span>`:''}
+    </div>
+  </div>`).join('');
+}
+
+// ── GLOBAL INVENTORY MODULE ────────────────────────────
+function renderInventory() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let showForm = false; let editItem = null; let search = '';
+
+  const render = () => {
+    const inv = DB.get('global_inventory');
+    const filtered = inv.filter(r=> !search || r.item?.toLowerCase().includes(search.toLowerCase()) || r.date?.includes(search));
+    const stockMap = {};
+    inv.forEach(r=>{ if(!stockMap[r.item])stockMap[r.item]={in:0,out:0}; stockMap[r.item].in+=Number(r.qtyIn||0); stockMap[r.item].out+=Number(r.qtyOut||0); });
+
+    div.innerHTML = `
+    <div class="page-title">📦 Inventory</div>
+    <div class="page-sub">All farm stock — feeds, vaccines, materials</div>
+
+    <div class="search-bar">
+      <input type="text" placeholder="Search item or date..." value="${search}" oninput="window._invSearch(this.value)"/>
+    </div>
+
+    ${Object.keys(stockMap).length?`<div class="card" style="margin-bottom:12px;">
+      <div class="card-title">Current Stock Levels</div>
+      ${Object.entries(stockMap).map(([item,s])=>{
+        const rem=Math.max(0,s.in-s.out); const pctLeft=s.in?Math.round((rem/s.in)*100):0;
+        const low=pctLeft<20&&s.in>0;
+        return `<div style="margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;">
+            <span>${item}</span><span style="color:${low?'var(--red2)':'var(--green)'};">${rem} remaining ${low?'⚠':''}  (${pctLeft}%)</span>
+          </div>
+          <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden;">
+            <div style="width:${pctLeft}%;height:100%;background:${low?'var(--red2)':'var(--green2)'};border-radius:2px;"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:''}
+
+    ${showForm ? renderInventoryForm(editItem) : `
+    <div class="section-header">
+      <span class="section-title">All Entries (${filtered.length})</span>
+      <button class="btn btn-primary btn-sm" onclick="window._invNew()">+ Add Item</button>
+    </div>`}
+
+    ${filtered.length?filtered.map(r=>`
+    <div class="record-item">
+      <div class="record-header">
+        <div><div class="record-title">${r.item||'—'}</div><div class="record-date">${fmt(r.date)} · ${r.enterprise||'General'}</div></div>
+        <div class="record-actions">
+          <button class="btn btn-sm btn-ghost" onclick="window._invEdit('${r.id}')">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="window._invDel('${r.id}')">Del</button>
+        </div>
+      </div>
+      <div class="record-meta">
+        <span>+${r.qtyIn||0} ${r.unit||''} in</span>
+        <span>${r.qtyOut||0} used</span>
+        <span style="color:var(--green);">=${Math.max(0,Number(r.qtyIn||0)-Number(r.qtyOut||0))} left</span>
+        ${r.supplier?`<span>📦 ${r.supplier}</span>`:''}
+        ${r.cost?`<span class="profit-negative">Cost: ${UGX(r.cost)}</span>`:''}
+      </div>
+    </div>`).join('')
+    :'<div class="empty"><div class="empty-icon">📦</div>No inventory entries yet</div>'}`;
+
+    window._invSearch = v => { search=v; render(); };
+    window._invNew   = () => { showForm=true; editItem=null; render(); };
+    window._invEdit  = id => { editItem=inv.find(r=>r.id===id); showForm=true; render(); };
+    window._invDel   = id => { if(!confirm2('Delete entry?'))return; DB.delete('global_inventory',id); render(); toast('Deleted ✓'); };
+    window._invSave  = () => {
+      const id=editItem?.id||uid();
+      const date=document.getElementById('inv_date')?.value; if(!date){toast('Set a date');return;}
+      const rec={id,date,item:document.getElementById('inv_item').value,qtyIn:document.getElementById('inv_in').value||0,qtyOut:document.getElementById('inv_out').value||0,unit:document.getElementById('inv_unit').value,supplier:document.getElementById('inv_supplier').value,enterprise:document.getElementById('inv_ent').value,cost:document.getElementById('inv_cost').value||0,notes:document.getElementById('inv_notes').value};
+      if(editItem)DB.update('global_inventory',id,rec);else DB.push('global_inventory',rec);
+      showForm=false;editItem=null;render();toast('Saved ✓');
+    };
+    window._invCancel = () => { showForm=false; editItem=null; render(); };
+  };
+  render();
+  return div;
+}
+
+function renderInventoryForm(e2) {
+  const e=e2||{};
+  const ents=['General','Poultry','Rabbits','Fish','Crops','Shop',...DB.get('custom_enterprises').map(x=>x.name)];
+  return `<div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Inventory Item</span><button class="close-btn" onclick="window._invCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="inv_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Item Name</label><input type="text" id="inv_item" value="${e.item||''}" placeholder="Feed, Vaccine, Charcoal..."/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Qty Added</label><input type="number" id="inv_in" value="${e.qtyIn||''}" placeholder="0"/></div>
+      <div class="field"><label>Qty Used</label><input type="number" id="inv_out" value="${e.qtyOut||''}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Unit</label><input type="text" id="inv_unit" value="${e.unit||''}" placeholder="kg, bags, litres..."/></div>
+      <div class="field"><label>Cost (UGX)</label><input type="number" id="inv_cost" value="${e.cost||''}" placeholder="0"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Enterprise</label><select id="inv_ent">${ents.map(n=>`<option ${e.enterprise===n?'selected':''} value="${n}">${n}</option>`).join('')}</select></div>
+      <div class="field"><label>Supplier</label><input type="text" id="inv_supplier" value="${e.supplier||''}" placeholder="Optional"/></div>
+    </div>
+    <div class="field"><label>Notes</label><input type="text" id="inv_notes" value="${e.notes||''}" placeholder="Optional"/></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._invSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._invCancel()">Cancel</button></div>
+  </div>`;
+}
+
+// ── CUSTOM ENTERPRISES MODULE ──────────────────────────
+function renderEnterprises() {
+  const div = document.createElement('div');
+  div.className = 'page';
+  let showForm = false;
+
+  const predefined = [
+    {id:'poultry',name:'Poultry',icon:'🐔'},{id:'rabbits',name:'Rabbits',icon:'🐇'},
+    {id:'fish',name:'Fish Farming',icon:'🐟'},{id:'crops',name:'Crops',icon:'🌽'},
+    {id:'shop',name:'Farm Shop',icon:'🏪'},{id:'feed',name:'Feed Production',icon:'🧪'}
+  ];
+
+  const render = () => {
+    const customs = DB.get('custom_enterprises');
+    div.innerHTML = `
+    <div class="page-title">Enterprises</div>
+    <div class="page-sub">Manage your farm modules</div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Built-in Modules</div>
+    <div class="module-grid" style="margin-bottom:20px;">
+      ${predefined.map(e=>`<div class="module-tile" onclick="showPage('${e.id}')"><div class="tile-icon">${e.icon}</div><div class="tile-name">${e.name}</div></div>`).join('')}
+    </div>
+
+    <div class="section-header">
+      <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Custom Enterprises</span>
+      <button class="btn btn-primary btn-sm" onclick="window._entNew()">+ Add New</button>
+    </div>
+
+    ${showForm ? renderEnterpriseForm() : ''}
+
+    ${customs.length?customs.map(e=>`
+    <div class="record-item">
+      <div class="record-header">
+        <div><div class="record-title">${e.icon||'🌾'} ${e.name}</div><div class="record-date">${e.description||'Custom enterprise'}</div></div>
+        <div class="record-actions">
+          <button class="btn btn-sm btn-ghost" onclick="showPage('ent_${e.id}')">Open</button>
+          <button class="btn btn-sm btn-danger" onclick="window._entDel('${e.id}')">Del</button>
+        </div>
+      </div>
+    </div>`).join('')
+    :'<div class="empty"><div class="empty-icon">➕</div>No custom enterprises yet.<br>Add Dairy, Beekeeping, etc.</div>'}`;
+
+    window._entNew    = () => { showForm=true; render(); };
+    window._entCancel = () => { showForm=false; render(); };
+    window._entDel    = id => {
+      if(!confirm2('Delete this enterprise and all its records?'))return;
+      DB.delete('custom_enterprises',id); DB.set('ent_'+id,[]);
+      render(); toast('Deleted ✓');
+    };
+    window._entSave   = () => {
+      const name=document.getElementById('ent_name')?.value?.trim();
+      if(!name){toast('Enter a name');return;}
+      const ent={id:uid(),name,icon:document.getElementById('ent_icon')?.value||'🌾',description:document.getElementById('ent_desc')?.value||''};
+      DB.push('custom_enterprises',ent); DB.set('ent_'+ent.id,[]);
+      showForm=false; render(); toast('Enterprise added ✓');
+    };
+  };
+  render();
+  return div;
+}
+
+function renderEnterpriseForm() {
+  return `<div class="form-panel" style="margin-bottom:14px;">
+    <div class="form-panel-header"><span class="form-panel-title">New Enterprise</span><button class="close-btn" onclick="window._entCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Icon (emoji)</label><input type="text" id="ent_icon" value="🌾" maxlength="2" style="font-size:22px;text-align:center;"/></div>
+      <div class="field"><label>Name</label><input type="text" id="ent_name" placeholder="Dairy, Beekeeping, Maize..."/></div>
+    </div>
+    <div class="field"><label>Description (optional)</label><input type="text" id="ent_desc" placeholder="What this enterprise does"/></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._entSave()">💾 Add Enterprise</button><button class="btn btn-ghost" onclick="window._entCancel()">Cancel</button></div>
+  </div>`;
+}
+
+// Generic custom enterprise page
+function renderCustomEnterprise(entId) {
+  const div = document.createElement('div');
+  div.className = 'page';
+  const ents = DB.get('custom_enterprises');
+  const ent  = ents.find(e=>'ent_'+e.id===entId) || ents.find(e=>e.id===entId);
+  if(!ent){div.innerHTML='<div class="page"><div class="empty">Enterprise not found</div></div>';return div;}
+  const key = 'ent_'+ent.id;
+  let showForm=false; let editItem=null; let search='';
+
+  const render=()=>{
+    const records=DB.get(key);
+    const filtered=records.filter(r=>!search||r.notes?.toLowerCase().includes(search.toLowerCase())||r.date?.includes(search));
+    const totalRev=records.reduce((s,r)=>s+Number(r.revenue||0),0);
+    const totalCost=records.reduce((s,r)=>s+Number(r.costs?.total||0),0);
+
+    div.innerHTML=`
+    <div class="page-title">${ent.icon||'🌾'} ${ent.name}</div>
+    <div class="page-sub">${ent.description||'Custom enterprise'}</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Revenue</div><div class="stat-value" style="color:var(--teal);font-size:16px;">${UGX(totalRev)}</div></div>
+      <div class="stat-box"><div class="stat-label">Net P/L</div><div class="stat-value" style="color:${totalRev-totalCost>=0?'var(--teal)':'var(--red2)'};font-size:16px;">${UGX(totalRev-totalCost)}</div></div>
+    </div>
+    <div class="search-bar"><input type="text" placeholder="Search date or notes..." value="${search}" oninput="window._ceSearch(this.value)"/></div>
+    ${showForm?renderCustomEntForm(ent,editItem):`<div class="section-header"><span class="section-title">Records (${filtered.length})</span><button class="btn btn-primary btn-sm" onclick="window._ceNew()">+ Add</button></div>`}
+    ${filtered.length?filtered.map(r=>`<div class="record-item">
+      <div class="record-header">
+        <div><div class="record-title">${fmt(r.date)}</div><div class="record-date">${r.notes||''}</div></div>
+        <div class="record-actions"><button class="btn btn-sm btn-ghost" onclick="window._ceEdit('${r.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="window._ceDel('${r.id}')">Del</button></div>
+      </div>
+      <div class="record-meta">
+        ${r.revenue?`<span class="profit-positive">Rev: ${UGX(r.revenue)}</span>`:''} 
+        ${r.costs?.total?`<span class="profit-negative">Cost: ${UGX(r.costs.total)}</span>`:''}
+        ${r.qty?`<span>Qty: ${r.qty} ${r.unit||''}</span>`:''}
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-icon">'+ent.icon+'</div>No records yet</div>'}`;
+
+    window._ceSearch=v=>{search=v;render();};
+    window._ceNew=()=>{showForm=true;editItem=null;render();};
+    window._ceEdit=id=>{editItem=records.find(r=>r.id===id);showForm=true;render();};
+    window._ceDel=id=>{if(!confirm2('Delete?'))return;DB.delete(key,id);render();toast('Deleted ✓');};
+    window._ceSave=()=>{
+      const id=editItem?.id||uid();
+      const date=document.getElementById('ce_date')?.value;if(!date){toast('Set a date');return;}
+      const qty=Number(document.getElementById('ce_qty')?.value||0);
+      const price=Number(document.getElementById('ce_price')?.value||0);
+      const costs=getCosts('ce_');
+      const rec={id,date,qty,unit:document.getElementById('ce_unit')?.value,price,revenue:qty*price,notes:document.getElementById('ce_notes')?.value,costs};
+      rec.profit=calcProfit(rec.revenue,costs.total);
+      if(editItem)DB.update(key,id,rec);else DB.push(key,rec);
+      showForm=false;editItem=null;render();toast('Saved ✓');
+    };
+    window._ceCancel=()=>{showForm=false;editItem=null;render();};
+  };
+  render();
+  return div;
+}
+
+function renderCustomEntForm(ent,e2){
+  const e=e2||{};
+  return `<div class="form-panel">
+    <div class="form-panel-header"><span class="form-panel-title">${e2?'Edit':'New'} Record</span><button class="close-btn" onclick="window._ceCancel()">✕</button></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input type="date" id="ce_date" value="${e.date||today()}"/></div>
+      <div class="field"><label>Quantity</label><input type="number" id="ce_qty" value="${e.qty||''}" placeholder="0" oninput="window._ceCalc()"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Unit</label><input type="text" id="ce_unit" value="${e.unit||''}" placeholder="kg, litres, heads..."/></div>
+      <div class="field"><label>Price Each (UGX)</label><input type="number" id="ce_price" value="${e.price||''}" placeholder="0" oninput="window._ceCalc()"/></div>
+    </div>
+    <div class="field"><label>Revenue (auto)</label><div class="readonly-field" id="ce_rev">${e.revenue?UGX(e.revenue):'—'}</div></div>
+    ${costsFormHTML('ce_')}
+    <div class="field" style="margin-top:10px;"><label>Notes</label><textarea id="ce_notes" rows="2">${e.notes||''}</textarea></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="window._ceSave()">💾 Save</button><button class="btn btn-ghost" onclick="window._ceCancel()">Cancel</button></div>
+  </div>`;
+}
+window._ceCalc=()=>{const q=Number(document.getElementById('ce_qty')?.value||0),p=Number(document.getElementById('ce_price')?.value||0),el=document.getElementById('ce_rev');if(el)el.textContent=q&&p?UGX(q*p):'—';};
 
 function renderDashboard() {
   const div = document.createElement('div');
@@ -468,19 +839,42 @@ function renderDashboard() {
 
   let period = 'month';
 
+  // Insert weekly summary chart data helper
+  function getWeeklySales() {
+    const allSales = [
+      ...DB.get('poultry_sales'), ...DB.get('rabbit_sales'),
+      ...DB.get('fish_sales'), ...DB.get('shop_sales')
+    ];
+    const weeks = {};
+    allSales.forEach(r => {
+      if(!r.date) return;
+      const d = new Date(r.date+'T00:00:00');
+      const wk = `W${Math.ceil(d.getDate()/7)} ${d.toLocaleString('default',{month:'short'})}`;
+      if(!weeks[wk]) weeks[wk]={rev:0,cost:0};
+      weeks[wk].rev  += Number(r.revenue||0);
+      weeks[wk].cost += Number(r.costs?.total||0);
+    });
+    return Object.entries(weeks).slice(-6);
+  }
+
   const render = () => {
     const stats = getDashboardStats(period);
     const settings = DB.getObj('settings');
 
+    const alerts = getAlerts();
+    const weekData = getWeeklySales();
+    const maxRev = Math.max(...weekData.map(([,w])=>w.rev), 1);
+
     div.innerHTML = `
     <div class="page-title">${settings.farmName||'My Farm'}</div>
-    <div class="page-sub">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+    <div class="page-sub">${settings.farmerName?settings.farmerName+' · ':''} ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+
+    ${alerts.length ? `<div style="margin-bottom:12px;">${alerts.map(a=>`<div class="alert-bar ${a.type==='warn'?'warn':''}""><span class="alert-icon">${a.icon}</span><span class="alert-text">${a.text}</span></div>`).join('')}</div>` : ''}
 
     <div class="filter-bar">
       ${['today','week','month','year','all'].map(p=>`<button class="filter-chip ${p===period?'active':''}" onclick="window._dashPeriod='${p}';window._dashRender()">${p.charAt(0).toUpperCase()+p.slice(1)}</button>`).join('')}
     </div>
 
-    <!-- P&L Summary -->
     <div class="card card-highlight" style="margin-bottom:14px;">
       <div class="card-title">Overall Performance</div>
       <div class="stat-grid">
@@ -497,36 +891,23 @@ function renderDashboard() {
       <div class="pl-bar"><div class="pl-bar-fill" style="width:${stats.revenue?pct(stats.revenue,stats.revenue+stats.costs):0}%;background:${stats.profit>=0?'var(--teal)':'var(--red2)'};"></div></div>
     </div>
 
-    <!-- Module tiles -->
+    ${weekData.length>1?`<div class="card" style="margin-bottom:14px;"><div class="card-title">Sales Trend</div><div class="bar-chart">${weekData.map(([wk,w])=>`<div class="bar-col"><div class="bar-val">${w.rev>=1000?Math.round(w.rev/1000)+'k':w.rev}</div><div class="bar-fill" style="height:${Math.round((w.rev/maxRev)*52)+4}px;background:var(--teal);"></div><div class="bar-label">${wk}</div></div>`).join('')}</div></div>`:''}
+
     <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Modules</div>
     <div class="module-grid">
-      ${Object.entries(stats.modules).map(([key,m])=>{
-        const profit = m.revenue - m.costs;
-        return `<div class="module-tile" onclick="showPage('${key}')">
-          <div class="tile-icon">${m.icon}</div>
-          <div class="tile-name">${m.label}</div>
-          <div class="tile-profit ${profit>=0?'profit-positive':'profit-negative'}">${profit>=0?'+':'-'}${fmtNum(Math.abs(profit))}</div>
-        </div>`;
-      }).join('')}
+      ${Object.entries(stats.modules).map(([key,m])=>{ const profit=m.revenue-m.costs; return `<div class="module-tile" onclick="showPage('${key}')"><div class="tile-icon">${m.icon}</div><div class="tile-name">${m.label}</div><div class="tile-profit ${profit>=0?'profit-positive':'profit-negative'}">${profit>=0?'+':'-'}${fmtNum(Math.abs(profit))}</div></div>`; }).join('')}
+      <div class="add-ent-btn" onclick="showPage('enterprises')"><span style="font-size:22px;">➕</span><span>Add Enterprise</span></div>
     </div>
 
-    <!-- Module breakdown -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Weekly Summary</div>
+      ${renderWeeklySummary()}
+    </div>
+
     <div class="card">
-      <div class="card-title">Cost Breakdown by Module</div>
-      ${Object.entries(stats.modules).map(([key,m])=>{
-        const profit=m.revenue-m.costs;
-        return `<div style="margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-            <span>${m.icon} ${m.label}</span>
-            <span class="${profit>=0?'profit-positive':'profit-negative'}" style="font-weight:700;">${profit>=0?'+':''}${UGX(profit)}</span>
-          </div>
-          <div style="display:flex;gap:4px;font-size:11px;color:var(--muted);">
-            <span>Rev: ${UGX(m.revenue)}</span><span>·</span><span>Cost: ${UGX(m.costs)}</span>
-          </div>
-        </div>`;
-      }).join('')}
+      <div class="card-title">Profit & Loss by Module</div>
+      ${Object.entries(stats.modules).map(([key,m])=>{ const profit=m.revenue-m.costs; return `<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>${m.icon} ${m.label}</span><span class="${profit>=0?'profit-positive':'profit-negative'}" style="font-weight:700;">${profit>=0?'+':''}${UGX(profit)}</span></div><div style="display:flex;gap:4px;font-size:11px;color:var(--muted);"><span>Rev: ${UGX(m.revenue)}</span><span>·</span><span>Cost: ${UGX(m.costs)}</span></div></div>`; }).join('')}
     </div>
-
     <div style="height:16px;"></div>`;
   };
 
@@ -545,6 +926,7 @@ function renderPoultry() {
   let activeTab = 'daily';
   let showForm = false;
   let editItem = null;
+  let searchTerm = '';
 
   const render = () => {
     const daily = DB.get('poultry_daily');
@@ -573,12 +955,15 @@ function renderPoultry() {
     </div>
 
     ${showForm ? renderPoultryForm(activeTab, editItem) : `
+    <div class="search-bar">
+      <input type="text" placeholder="Search date, notes..." value="${searchTerm}" oninput="window._pSearch(this.value)"/>
+    </div>
     <div class="section-header">
       <span class="section-title">${activeTab==='daily'?'Daily Records':activeTab==='sales'?'Sales Records':'Inventory'}</span>
       <button class="btn btn-primary btn-sm" onclick="window._pNew()">+ Add</button>
     </div>`}
 
-    <div id="poultry-list">${renderPoultryList(activeTab, daily, sales, inventory)}</div>`;
+    <div id="poultry-list">${renderPoultryList(activeTab, daily, sales, inventory, searchTerm)}</div>`;
 
     window._pTab = t => { activeTab=t; showForm=false; editItem=null; render(); };
     window._pNew = () => { showForm=true; editItem=null; render(); };
@@ -593,6 +978,7 @@ function renderPoultry() {
     };
     window._pSave = () => savePoultryForm(activeTab, editItem, () => { showForm=false; editItem=null; render(); toast('Saved ✓'); });
     window._pCancel = () => { showForm=false; editItem=null; render(); };
+    window._pSearch = v => { searchTerm=v; render(); };
   };
   render();
   return div;
@@ -689,10 +1075,11 @@ function savePoultryForm(tab, editItem, cb) {
   cb();
 }
 
-function renderPoultryList(tab, daily, sales, inventory) {
+function renderPoultryList(tab, daily, sales, inventory, search='') {
   if(tab === 'daily') {
-    if(!daily.length) return '<div class="empty"><div class="empty-icon">📋</div>No daily records yet</div>';
-    return daily.map(r=>`
+    const data = search ? daily.filter(r=>r.date?.includes(search)||r.notes?.toLowerCase().includes(search.toLowerCase())||r.feedType?.toLowerCase().includes(search.toLowerCase())) : daily;
+    if(!data.length) return '<div class="empty"><div class="empty-icon">📋</div>No daily records yet</div>';
+    return data.map(r=>`
     <div class="record-item">
       <div class="record-header">
         <div><div class="record-title">${fmt(r.date)}</div><div class="record-date">Birds: ${fmtNum(r.totalBirds)} · Deaths: ${r.deaths||0}</div></div>
@@ -1334,8 +1721,12 @@ function exportExcel(module) {
 
   // Summary sheet
   const stats = getDashboardStats('all');
+  const s2 = DB.getObj('settings');
   const summaryData = [
-    ['Farm Manager Export', `Generated: ${new Date().toLocaleDateString()}`,'',''],
+    ['FARM MANAGER REPORT', '','',''],
+    ['Farm Name:', s2.farmName||'—', 'Farmer:', s2.farmerName||'—'],
+    ['Location:', s2.location||'—', 'Phone:', s2.phone||'—'],
+    ['Generated:', new Date().toLocaleDateString(), '',''],
     [''],
     ['Module','Total Revenue','Total Costs','Net Profit/Loss'],
     ...Object.values(stats.modules).map(m=>[m.icon+' '+m.label, m.revenue, m.costs, m.revenue-m.costs]),
@@ -1345,6 +1736,19 @@ function exportExcel(module) {
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
   wsSummary['!cols'] = [{wch:20},{wch:18},{wch:16},{wch:18}];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+  // Global Inventory sheet
+  if(module==='all') {
+    addSheet('Inventory', DB.get('global_inventory').map(r=>[r.date,r.item,r.qtyIn,r.qtyOut,r.unit,r.enterprise,r.supplier,r.cost||0,r.notes]), ['Date','Item','Qty Added','Qty Used','Unit','Enterprise','Supplier','Cost (UGX)','Notes']);
+  }
+
+  // Custom enterprises
+  if(module==='all') {
+    DB.get('custom_enterprises').forEach(ent => {
+      const recs = DB.get('ent_'+ent.id);
+      if(recs.length) addSheet(ent.name.slice(0,28), recs.map(r=>[r.date,r.qty,r.unit,r.price,r.revenue,r.costs?.total||0,r.profit||0,r.notes]), ['Date','Qty','Unit','Price','Revenue','Total Costs','Profit/Loss','Notes']);
+    });
+  }
 
   const fname = `${farmName.replace(/\s/g,'_')}_${module}_${new Date().toISOString().slice(0,10)}.xlsx`;
   XLSX.writeFile(wb, fname);
@@ -1406,12 +1810,18 @@ function renderSettings() {
   </div>
 
   <div class="card" style="margin-bottom:14px;">
-    <div class="card-title">Farm Details</div>
-    <div class="field"><label>Farm Name</label><input type="text" id="s_name" value="${s.farmName||''}" placeholder="My Farm"/></div>
-    <div class="field"><label>Farmer Name</label><input type="text" id="s_farmer" value="${s.farmerName||''}" placeholder="Your name"/></div>
-    <div class="field"><label>Initial Poultry Bird Count</label><input type="number" id="s_birds" value="${s.initialBirds||''}" placeholder="500"/><div class="field-hint">Used to calculate birds alive on poultry dashboard</div></div>
-    <div class="field"><label>Location</label><input type="text" id="s_loc" value="${s.location||''}" placeholder="District, Country"/></div>
-    <button class="btn btn-primary" onclick="window._saveSettings()">💾 Save Settings</button>
+    <div class="card-title">🌿 Farm Profile</div>
+    <div class="field-row">
+      <div class="field"><label>Farm Name</label><input type="text" id="s_name" value="${s.farmName||''}" placeholder="My Farm"/></div>
+      <div class="field"><label>Farmer Name</label><input type="text" id="s_farmer" value="${s.farmerName||''}" placeholder="Your name"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Location / District</label><input type="text" id="s_loc" value="${s.location||''}" placeholder="District, Country"/></div>
+      <div class="field"><label>Phone</label><input type="tel" id="s_phone" value="${s.phone||''}" placeholder="+256..."/></div>
+    </div>
+    <div class="field"><label>Initial Poultry Count</label><input type="number" id="s_birds" value="${s.initialBirds||''}" placeholder="500"/><div class="field-hint">Used to calculate birds alive on dashboard</div></div>
+    <div class="field"><label>Currency</label><input type="text" id="s_currency" value="${s.currency||'UGX'}" placeholder="UGX"/></div>
+    <button class="btn btn-primary" onclick="window._saveSettings()">💾 Save Profile</button>
   </div>
 
   <div class="card" style="border-color:var(--red);">
@@ -1426,6 +1836,8 @@ function renderSettings() {
       farmerName: document.getElementById('s_farmer').value,
       initialBirds: document.getElementById('s_birds').value,
       location: document.getElementById('s_loc').value,
+      phone: document.getElementById('s_phone')?.value||'',
+      currency: document.getElementById('s_currency')?.value||'UGX',
       farmIcon: DB.getObj('settings').farmIcon || ''
     };
     DB.set('settings', settings);
@@ -1454,7 +1866,9 @@ function renderSettings() {
   window._clearAll = () => {
     if(!confirm2('DELETE ALL data permanently?')) return;
     if(!confirm2('Are you absolutely sure? This cannot be undone.')) return;
-    ['poultry_daily','poultry_inventory','poultry_sales','rabbit_records','rabbit_sales','fish_ponds','fish_records','fish_sales','crop_records','shop_stock','shop_sales','feed_batches'].forEach(k=>DB.set(k,[]));
+    ['poultry_daily','poultry_inventory','poultry_sales','rabbit_records','rabbit_sales','fish_ponds','fish_records','fish_sales','crop_records','shop_stock','shop_sales','feed_batches','global_inventory'].forEach(k=>DB.set(k,[]));
+    DB.get('custom_enterprises').forEach(e=>DB.set('ent_'+e.id,[]));
+    DB.set('custom_enterprises',[]);
     toast('All data cleared ✓');
     showPage('dashboard');
   };
